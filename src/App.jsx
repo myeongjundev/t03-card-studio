@@ -6,8 +6,11 @@ import {
 } from './state/editorState.js';
 import { renderCard } from './render/renderCard.js';
 import { buildFileName, downloadCanvas } from './io/exportImage.js';
+import { loadTemplates, saveTemplates } from './templates/storage.js';
+import { templateFromState, stateFromTemplate } from './templates/schema.js';
 import EditorPanel from './components/EditorPanel.jsx';
 import PreviewPanel from './components/PreviewPanel.jsx';
+import TemplatePanel from './components/TemplatePanel.jsx';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
 
@@ -15,6 +18,10 @@ export default function App() {
   const [state, setState] = useState(createInitialState);
   const [notice, setNotice] = useState(null);
   const [fontsReady, setFontsReady] = useState(false);
+
+  const [templates, setTemplates] = useState([]);
+  const [templateName, setTemplateName] = useState('');
+  const [editingId, setEditingId] = useState(null);
 
   const canvasRef = useRef(null);
   const imageUrlRef = useRef(null);
@@ -60,8 +67,99 @@ export default function App() {
     []
   );
 
+  // 저장된 템플릿을 처음 한 번만 읽어 온다.
+  useEffect(() => {
+    const { templates: stored, warning } = loadTemplates();
+    setTemplates(stored);
+    if (warning) setNotice({ type: 'error', text: warning });
+  }, []);
+
   const update = useCallback((patch) => {
     setState((prev) => clampState({ ...prev, ...patch }));
+  }, []);
+
+  /**
+   * 목록 변경은 반드시 이 함수를 거친다.
+   * 저장에 실패하면 화면 목록도 되돌려서, 화면에는 있는데 실제로는 저장되지
+   * 않은 상태가 생기지 않게 한다.
+   */
+  const commitTemplates = useCallback((next, successText) => {
+    const result = saveTemplates(next);
+    if (!result.ok) {
+      setNotice({ type: 'error', text: result.message });
+      return false;
+    }
+    setTemplates(next);
+    setNotice({ type: 'success', text: successText });
+    return true;
+  }, []);
+
+  const createTemplate = useCallback(() => {
+    const name = templateName.trim();
+    if (!name) return;
+    const template = templateFromState(state, name);
+    if (commitTemplates([...templates, template], `'${name}' 템플릿을 저장했습니다.`)) {
+      setEditingId(null);
+    }
+  }, [commitTemplates, state, templateName, templates]);
+
+  const updateTemplate = useCallback(() => {
+    const name = templateName.trim();
+    if (!name || !editingId) return;
+
+    const next = templates.map((template) =>
+      template.id === editingId
+        ? {
+            // id 와 생성 시각은 유지한다. 수정이 새 템플릿 추가가 되면 안 된다.
+            ...templateFromState(state, name),
+            id: template.id,
+            createdAt: template.createdAt,
+          }
+        : template
+    );
+    commitTemplates(next, `'${name}' 템플릿의 변경 내용을 저장했습니다.`);
+  }, [commitTemplates, editingId, state, templateName, templates]);
+
+  const applyTemplate = useCallback(
+    (id, enterEditMode) => {
+      const template = templates.find((item) => item.id === id);
+      if (!template) return;
+
+      setState((prev) => clampState(stateFromTemplate(template, prev)));
+      setTemplateName(template.name);
+      setEditingId(enterEditMode ? template.id : null);
+      setNotice({
+        type: 'success',
+        text: enterEditMode
+          ? `'${template.name}' 템플릿을 편집기로 불러왔습니다. 값을 바꾼 뒤 '변경 내용 저장'을 누르세요.`
+          : `'${template.name}' 템플릿을 불러왔습니다.`,
+      });
+    },
+    [templates]
+  );
+
+  const deleteTemplate = useCallback(
+    (id) => {
+      const template = templates.find((item) => item.id === id);
+      if (!template) return;
+      if (!window.confirm(`'${template.name}' 템플릿을 삭제할까요? 되돌릴 수 없습니다.`)) {
+        return;
+      }
+
+      const next = templates.filter((item) => item.id !== id);
+      if (commitTemplates(next, `'${template.name}' 템플릿을 삭제했습니다.`)) {
+        if (editingId === id) {
+          setEditingId(null);
+          setTemplateName('');
+        }
+      }
+    },
+    [commitTemplates, editingId, templates]
+  );
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setTemplateName('');
   }, []);
 
   const pickImage = useCallback((file) => {
@@ -161,6 +259,18 @@ export default function App() {
           onChange={update}
           onDownload={handleDownload}
           canDownload={fontsReady}
+        />
+        <TemplatePanel
+          templates={templates}
+          name={templateName}
+          editingId={editingId}
+          onNameChange={setTemplateName}
+          onCreate={createTemplate}
+          onUpdate={updateTemplate}
+          onLoad={(id) => applyTemplate(id, false)}
+          onEdit={(id) => applyTemplate(id, true)}
+          onDelete={deleteTemplate}
+          onCancelEdit={cancelEdit}
         />
       </div>
     </div>
