@@ -9,6 +9,14 @@ import { checkTextContrast } from './render/contrast.js';
 import { buildFileName, downloadCanvas, copyCanvasImage } from './io/exportImage.js';
 import { downloadAllRatios } from './io/exportAllRatios.js';
 import { PRESETS, applyPreset } from './state/presets.js';
+import {
+  createHistory,
+  recordChange,
+  undo as undoHistory,
+  redo as redoHistory,
+  canUndo as historyCanUndo,
+  canRedo as historyCanRedo,
+} from './state/history.js';
 import { buildShareUrl, readShareUrl, copyToClipboard } from './io/shareLink.js';
 import { downloadTemplatesJson, readTemplatesFile } from './io/templateFile.js';
 import { loadTemplates, saveTemplates } from './templates/storage.js';
@@ -33,6 +41,20 @@ export default function App() {
   const canvasRef = useRef(null);
   const imageUrlRef = useRef(null);
   const imageRequestRef = useRef(0);
+
+  // 되돌리기 / 다시하기.
+  //
+  // history 자체는 리렌더가 필요 없는 순수 데이터라 ref 에 둔다. 버튼을
+  // 켜고 끄려면 리렌더가 한 번은 필요하므로 historyTick 을 올려 그때만
+  // 다시 그리게 한다. lastStateRef 는 "지금 묶음이 시작되기 직전 상태",
+  // lastChangeAtRef 는 그 묶음이 마지막으로 갱신된 시각이다.
+  const historyRef = useRef(createHistory());
+  const lastStateRef = useRef(state);
+  const lastChangeAtRef = useRef(0);
+  // 되돌리기/다시하기 자신이 만든 state 변경은 다시 history 에 기록하면 안
+  // 된다. 그 순간에만 이 플래그를 세워 다음 effect 실행 한 번을 건너뛴다.
+  const suppressRecordRef = useRef(false);
+  const [, setHistoryTick] = useState(0);
 
   // 폰트 로딩 전에 그리면 폴백 폰트로 측정되어 줄바꿈 위치가 달라진다.
   // 첫 렌더를 폰트 준비 이후로 미룬다.
@@ -87,6 +109,34 @@ export default function App() {
     );
   }, [state, fontsReady]);
 
+  /**
+   * 상태가 바뀔 때마다 되돌리기 묶음을 갱신한다.
+   *
+   * 되돌리기/다시하기 자신이 만든 변경(suppressRecordRef)은 건너뛴다.
+   * 그러지 않으면 되돌리기를 누른 것 자체가 새 되돌리기 단계로 기록되어
+   * 되돌리기를 반복할수록 다시하기 가지가 끝없이 쌓이는 문제가 생긴다.
+   */
+  useEffect(() => {
+    if (suppressRecordRef.current) {
+      suppressRecordRef.current = false;
+      lastStateRef.current = state;
+      return;
+    }
+    if (lastStateRef.current === state) return; // 첫 렌더 등 실제 변경이 아님
+
+    const now = Date.now();
+    const { history, changed } = recordChange(
+      historyRef.current,
+      lastStateRef.current,
+      now,
+      lastChangeAtRef.current
+    );
+    historyRef.current = history;
+    lastChangeAtRef.current = now;
+    lastStateRef.current = state;
+    if (changed) setHistoryTick((tick) => tick + 1);
+  }, [state]);
+
   // 주소에 공유 링크가 있으면 열어 준다. 첫 렌더 때 한 번만 확인한다.
   useEffect(() => {
     const result = readShareUrl(createInitialState());
@@ -121,6 +171,75 @@ export default function App() {
   const update = useCallback((patch) => {
     setState((prev) => clampState({ ...prev, ...patch }));
   }, []);
+
+  /**
+   * 되돌리기/다시하기 순간에는 새 state 를 그대로 대입한다. history 에서
+   * 꺼낸 값은 예전에 이미 clampState 를 거친 상태이므로 다시 검증할 필요가
+   * 없다. suppressRecordRef 와 lastChangeAtRef 리셋은 이 변경이 history 에
+   * 다시 기록되지 않게 하고, 되돌린 직후 바로 편집을 시작하면 그 편집이
+   * 새 묶음으로 취급되게 한다.
+   */
+  const handleUndo = useCallback(() => {
+    const result = undoHistory(historyRef.current, state);
+    if (!result) return;
+    historyRef.current = result.history;
+    suppressRecordRef.current = true;
+    lastChangeAtRef.current = 0;
+    setState(result.state);
+    setHistoryTick((tick) => tick + 1);
+  }, [state]);
+
+  const handleRedo = useCallback(() => {
+    const result = redoHistory(historyRef.current, state);
+    if (!result) return;
+    historyRef.current = result.history;
+    suppressRecordRef.current = true;
+    lastChangeAtRef.current = 0;
+    setState(result.state);
+    setHistoryTick((tick) => tick + 1);
+  }, [state]);
+
+  const canUndoNow = historyCanUndo(historyRef.current);
+  const canRedoNow = historyCanRedo(historyRef.current);
+
+  /**
+   * Ctrl+Z / Ctrl+Shift+Z (또는 Ctrl+Y) 로 되돌리기/다시하기를 한다.
+   *
+   * 텍스트를 입력 중일 때는 끄지 않는다 — 브라우저가 텍스트 필드 자체에
+   * 이미 되돌리기 기능을 갖고 있고, 그걸 밀어내고 카드 전체를 되돌리면
+   * "글자 하나만 고치려 했는데 위치·색까지 되돌아갔다" 는 혼란을 준다.
+   * 슬라이더나 색상 선택처럼 텍스트가 아닌 입력에 초점이 있을 때는
+   * 카드 전체 되돌리기가 자연스러우므로 막지 않는다.
+   */
+  useEffect(() => {
+    const isTextEditable = (el) => {
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      if (el.tagName === 'TEXTAREA') return true;
+      if (el.tagName === 'INPUT') {
+        const type = (el.getAttribute('type') || 'text').toLowerCase();
+        return ['text', 'search', 'email', 'url', 'tel', 'password', 'number'].includes(type);
+      }
+      return false;
+    };
+
+    const handleKeyDown = (event) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (isTextEditable(document.activeElement)) return;
+
+      const key = event.key.toLowerCase();
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      } else if ((key === 'z' && event.shiftKey) || key === 'y') {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   /**
    * 목록 변경은 반드시 이 함수를 거친다.
@@ -452,6 +571,10 @@ export default function App() {
           onCopyImage={copyImage}
           onShare={shareLink}
           canDownload={fontsReady}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndoNow}
+          canRedo={canRedoNow}
         />
         <TemplatePanel
           templates={templates}

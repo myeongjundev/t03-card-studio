@@ -24,6 +24,10 @@ const PreviewPanel = forwardRef(function PreviewPanel(
     onCopyImage,
     onShare,
     canDownload,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo,
   },
   canvasRef
 ) {
@@ -115,6 +119,27 @@ const PreviewPanel = forwardRef(function PreviewPanel(
   return (
     <section className="panel panel-preview" aria-labelledby="preview-heading">
       <h2 id="preview-heading">미리보기</h2>
+
+      <div className="history-controls">
+        <button
+          type="button"
+          className="small"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="되돌리기 (Ctrl+Z)"
+        >
+          ↩ 실행 취소
+        </button>
+        <button
+          type="button"
+          className="small"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="다시 실행 (Ctrl+Shift+Z)"
+        >
+          ↪ 다시 실행
+        </button>
+      </div>
 
       <div className="preview-head">
         <div className="ratio-group segmented" role="group" aria-label="화면 비율">

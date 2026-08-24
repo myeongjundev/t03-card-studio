@@ -318,3 +318,12 @@ button.small { padding: 5px 10px; font-size: 13px; }
   margin-top: 12px;
 }
 .stroke-color-label { font-size: 13px; color: var(--muted); }
+
+/* ── 되돌리기 / 다시하기 ──────────────────────────── */
+.history-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.history-controls button { color: var(--muted); }
+.history-controls button:not(:disabled):hover { color: var(--text); }
