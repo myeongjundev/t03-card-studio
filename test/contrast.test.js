@@ -6,6 +6,7 @@ import {
   hexToRgb,
   backgroundLuminanceOf,
   suggestTextColor,
+  checkTextContrast,
 } from '../src/render/contrast.js';
 
 /** width*height 픽셀을 한 가지 색으로 채운 가짜 ImageData */
@@ -69,4 +70,27 @@ test('투명한 픽셀은 배경으로 세지 않는다', () => {
 test('밝은 배경에는 어두운 글자를, 어두운 배경에는 흰 글자를 제안한다', () => {
   assert.equal(suggestTextColor(relativeLuminance(255, 255, 255)), '#1a1a1a');
   assert.equal(suggestTextColor(relativeLuminance(0, 0, 0)), '#ffffff');
+});
+
+test('외곽선이 있으면 배경이 아니라 테두리를 기준으로 판정한다', () => {
+  // 흰 배경에 흰 글자지만 검은 테두리가 있으면 실제로는 잘 읽힌다.
+  // 배경만 보면 "읽기 어려움" 이라고 잘못 경고하게 된다.
+  const ctx = {
+    getImageData: () => solid([255, 255, 255]),
+  };
+  const area = { x: 0, y: 0, width: 10, height: 10 };
+
+  const withStroke = checkTextContrast(ctx, area, '#ffffff', 140, {
+    color: '#000000',
+    width: 12,
+  });
+  assert.equal(withStroke.basis, 'stroke');
+  assert.equal(withStroke.passes, true);
+
+  const withoutStroke = checkTextContrast(ctx, area, '#ffffff', 140, {
+    color: '#000000',
+    width: 0,
+  });
+  assert.equal(withoutStroke.basis, 'background');
+  assert.equal(withoutStroke.passes, false);
 });

@@ -6,7 +6,8 @@ import {
 } from './state/editorState.js';
 import { renderCard } from './render/renderCard.js';
 import { checkTextContrast } from './render/contrast.js';
-import { buildFileName, downloadCanvas } from './io/exportImage.js';
+import { buildFileName, downloadCanvas, copyCanvasImage } from './io/exportImage.js';
+import { PRESETS, applyPreset } from './state/presets.js';
 import { buildShareUrl, readShareUrl, copyToClipboard } from './io/shareLink.js';
 import { downloadTemplatesJson, readTemplatesFile } from './io/templateFile.js';
 import { loadTemplates, saveTemplates } from './templates/storage.js';
@@ -77,7 +78,10 @@ export default function App() {
     // 추측이 아니라 화면에 나온 그대로를 재는 것이라, 이미지 위에서도 정확하다.
     setContrast(
       result.area
-        ? checkTextContrast(ctx, result.area, state.color, result.fontSize)
+        ? checkTextContrast(ctx, result.area, state.color, result.fontSize, {
+            color: state.strokeColor,
+            width: state.strokeWidth * result.fontSize,
+          })
         : null
     );
   }, [state, fontsReady]);
@@ -330,6 +334,28 @@ export default function App() {
     [update]
   );
 
+  /** 프리셋은 보이는 방식만 바꾼다. 쓰던 문구와 고른 이미지는 유지한다. */
+  const usePreset = useCallback((presetId) => {
+    setState((prev) => clampState(applyPreset(prev, presetId)));
+    const preset = PRESETS.find((item) => item.id === presetId);
+    setNotice({
+      type: 'success',
+      text: `'${preset?.name}' 스타일을 적용했습니다. 문구는 그대로 두었습니다.`,
+    });
+  }, []);
+
+  /** 이미지를 클립보드에 넣는다. 대화창에 바로 붙여넣기 위한 것이다. */
+  const copyImage = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const result = await copyCanvasImage(canvas);
+    setNotice(
+      result.ok
+        ? { type: 'success', text: '이미지를 복사했습니다. 대화창에 붙여넣기 하세요.' }
+        : { type: 'error', text: result.message }
+    );
+  }, []);
+
   /** 대비 검사가 제안한 색을 그대로 적용한다. */
   const applySuggestedColor = useCallback(() => {
     if (!contrast?.suggestion) return;
@@ -384,6 +410,7 @@ export default function App() {
           layout={layout}
           contrast={contrast}
           onApplySuggestedColor={applySuggestedColor}
+          onUsePreset={usePreset}
           onPickImage={pickImage}
           onClearImage={clearImage}
         />
@@ -394,6 +421,7 @@ export default function App() {
           onChange={update}
           onMoveText={moveText}
           onDownload={handleDownload}
+          onCopyImage={copyImage}
           onShare={shareLink}
           canDownload={fontsReady}
         />

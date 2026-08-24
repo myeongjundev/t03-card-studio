@@ -118,6 +118,24 @@ export function validateTemplate(raw, index = 0) {
     );
   }
 
+  // 외곽선은 나중에 더한 항목이다. 예전에 저장한 템플릿과 예전에 만든 공유
+  // 링크에는 이 값이 없으므로, 없으면 기본값으로 채우고 있을 때만 검사한다.
+  let strokeWidth = base.strokeWidth;
+  if (raw.strokeWidth !== undefined && raw.strokeWidth !== null) {
+    const error = checkNumber(raw.strokeWidth, 'strokeWidth', LIMITS.strokeWidth, where);
+    if (error) return fail(error);
+    strokeWidth = raw.strokeWidth;
+  }
+  if (
+    raw.strokeColor !== undefined &&
+    raw.strokeColor !== null &&
+    !HEX_COLOR.test(raw.strokeColor)
+  ) {
+    return fail(
+      `${where}의 'strokeColor' 값 '${raw.strokeColor}' 이(가) 색상 형식이 아닙니다. (#ffffff 형태)`
+    );
+  }
+
   if (raw.fit !== undefined && !FITS.includes(raw.fit)) {
     return fail(`${where}의 'fit' 값 '${raw.fit}' 은(는) 지원하지 않습니다.`);
   }
@@ -155,6 +173,8 @@ export function validateTemplate(raw, index = 0) {
       textY: raw.textY,
       fontSize: raw.fontSize,
       color: normalizeHexColor(raw.color, base.color),
+      strokeWidth,
+      strokeColor: normalizeHexColor(raw.strokeColor, base.strokeColor),
       lineHeight,
       bgColor: normalizeHexColor(raw.bgColor, base.bgColor),
       transparentBg: raw.transparentBg ?? base.transparentBg,
@@ -218,6 +238,8 @@ export function templateFromState(state, name) {
     textY: state.textY,
     fontSize: state.fontSize,
     color: state.color,
+    strokeWidth: state.strokeWidth,
+    strokeColor: state.strokeColor,
     lineHeight: state.lineHeight,
     align: state.align,
   };
@@ -236,6 +258,8 @@ export function stateFromTemplate(template, currentState) {
     textY: template.textY,
     fontSize: template.fontSize,
     color: template.color,
+    strokeWidth: template.strokeWidth,
+    strokeColor: template.strokeColor,
     lineHeight: template.lineHeight,
     align: template.align,
   };

@@ -114,9 +114,29 @@ export function suggestTextColor(backgroundLuminance) {
  * @param {number} fontSize 실제로 그려진 글자 크기
  * @returns {{ratio: number, required: number, passes: boolean, suggestion: string}|null}
  */
-export function checkTextContrast(ctx, area, textColor, fontSize) {
+export function checkTextContrast(ctx, area, textColor, fontSize, stroke = null) {
   const textRgb = hexToRgb(textColor);
   if (!textRgb || !area || area.width < 1 || area.height < 1) return null;
+
+  const required = fontSize >= 24 ? CONTRAST_AA_LARGE : CONTRAST_AA_NORMAL;
+  const textLuminanceOf = relativeLuminance(...textRgb);
+
+  // 외곽선이 있으면 글자를 감싸는 것은 배경이 아니라 테두리다.
+  // 이때 배경을 기준으로 재면, 테두리 덕분에 잘 읽히는 글자를 두고
+  // "읽기 어려움" 이라고 잘못 경고하게 된다.
+  if (stroke && stroke.width >= 2) {
+    const strokeRgb = hexToRgb(stroke.color);
+    if (strokeRgb) {
+      const ratio = contrastRatio(textLuminanceOf, relativeLuminance(...strokeRgb));
+      return {
+        ratio,
+        required,
+        passes: ratio >= required,
+        basis: 'stroke',
+        suggestion: suggestTextColor(relativeLuminance(...strokeRgb)),
+      };
+    }
+  }
 
   let imageData;
   try {
@@ -128,15 +148,13 @@ export function checkTextContrast(ctx, area, textColor, fontSize) {
   const backgroundLuminance = backgroundLuminanceOf(imageData, textRgb);
   if (backgroundLuminance === null) return null;
 
-  const textLuminance = relativeLuminance(...textRgb);
-  const ratio = contrastRatio(textLuminance, backgroundLuminance);
-  // 굵은 글씨라 24px 이상이면 큰 글자로 본다.
-  const required = fontSize >= 24 ? CONTRAST_AA_LARGE : CONTRAST_AA_NORMAL;
+  const ratio = contrastRatio(textLuminanceOf, backgroundLuminance);
 
   return {
     ratio,
     required,
     passes: ratio >= required,
+    basis: 'background',
     suggestion: suggestTextColor(backgroundLuminance),
   };
 }

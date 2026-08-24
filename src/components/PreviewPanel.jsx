@@ -13,7 +13,16 @@ import { RATIO_KEYS, getCanvasSize } from '../state/editorState.js';
 const GRAB_PADDING = 24;
 
 const PreviewPanel = forwardRef(function PreviewPanel(
-  { state, textArea, onChange, onMoveText, onDownload, onShare, canDownload },
+  {
+    state,
+    textArea,
+    onChange,
+    onMoveText,
+    onDownload,
+    onCopyImage,
+    onShare,
+    canDownload,
+  },
   canvasRef
 ) {
   const size = getCanvasSize(state.ratio);
@@ -122,6 +131,9 @@ const PreviewPanel = forwardRef(function PreviewPanel(
         <div className="button-row">
           <button type="button" onClick={onShare}>
             링크 복사
+          </button>
+          <button type="button" onClick={onCopyImage} disabled={!canDownload}>
+            이미지 복사
           </button>
           <button
             type="button"

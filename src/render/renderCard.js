@@ -91,12 +91,17 @@ function drawText(ctx, state, width, height) {
   const { lines, fontSize } = layoutText(ctx, state, width, height);
   ctx.textAlign = state.align;
 
+  // 외곽선은 글자 바깥으로 절반만큼 번진다. 자리 계산에 그만큼을 더해야
+  // 가장자리에서 테두리가 잘리지 않는다.
+  const strokeWidth = (state.strokeWidth ?? 0) * fontSize;
+  const strokeBleed = strokeWidth / 2;
+
   const lineStep = fontSize * state.lineHeight;
-  const blockHeight = blockHeightOf(lines.length, fontSize, state.lineHeight);
-  const blockWidth = lines.reduce(
-    (widest, line) => Math.max(widest, ctx.measureText(line).width),
-    0
-  );
+  const blockHeight =
+    blockHeightOf(lines.length, fontSize, state.lineHeight) + strokeWidth;
+  const blockWidth =
+    lines.reduce((widest, line) => Math.max(widest, ctx.measureText(line).width), 0) +
+    strokeWidth;
 
   const marginX = (width * (1 - TEXT_MAX_WIDTH_RATIO)) / 2;
   const marginY = (height * (1 - TEXT_MAX_HEIGHT_RATIO)) / 2;
@@ -117,10 +122,22 @@ function drawText(ctx, state, width, height) {
   );
 
   const x = left + anchorOffset;
-  const firstY = top + fontSize / 2;
+  const firstY = top + strokeBleed + fontSize / 2;
+
+  if (strokeWidth > 0) {
+    ctx.lineWidth = strokeWidth;
+    ctx.strokeStyle = state.strokeColor;
+    // 뾰족한 모서리에서 테두리가 창처럼 뻗어 나가는 것을 막는다.
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
+  }
 
   lines.forEach((line, index) => {
-    ctx.fillText(line, x, firstY + index * lineStep);
+    const y = firstY + index * lineStep;
+    // 테두리를 먼저 그리고 그 위에 글자를 얹는다. 순서를 바꾸면 테두리가
+    // 글자 안쪽까지 덮어 획이 얇아 보인다.
+    if (strokeWidth > 0) ctx.strokeText(line, x, y);
+    ctx.fillText(line, x, y);
   });
 
   // 가독성 검사가 읽을 수 있도록 문구가 차지한 사각형을 함께 돌려준다.

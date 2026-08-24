@@ -47,3 +47,28 @@ test('3자리 색상은 color input과 호환되는 6자리로 정규화한다',
   const state = clampState({ ...createInitialState(), color: '#AbC' });
   assert.equal(state.color, '#aabbcc');
 });
+
+test('외곽선 항목이 없는 예전 템플릿도 기본값으로 복원된다', () => {
+  const old = validTemplate();
+  delete old.strokeWidth;
+  delete old.strokeColor;
+
+  const result = validateImportPayload(payload(old));
+  assert.equal(result.ok, true);
+  const base = createInitialState();
+  assert.equal(result.templates[0].strokeWidth, base.strokeWidth);
+  assert.equal(result.templates[0].strokeColor, base.strokeColor);
+});
+
+test('외곽선 값이 있으면 타입과 범위를 검사한다', () => {
+  const tooThick = validateImportPayload(payload(validTemplate({ strokeWidth: 5 })));
+  assert.equal(tooThick.ok, false);
+  assert.match(tooThick.message, /strokeWidth/);
+
+  const notNumber = validateImportPayload(payload(validTemplate({ strokeWidth: '굵게' })));
+  assert.equal(notNumber.ok, false);
+
+  const badColor = validateImportPayload(payload(validTemplate({ strokeColor: '검정' })));
+  assert.equal(badColor.ok, false);
+  assert.match(badColor.message, /strokeColor/);
+});

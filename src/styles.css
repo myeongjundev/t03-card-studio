@@ -301,3 +301,20 @@ button.small { padding: 5px 10px; font-size: 13px; }
 .canvas-frame canvas { touch-action: none; }
 .canvas-frame canvas.grabbable { cursor: grab; }
 .canvas-frame canvas.dragging { cursor: grabbing; }
+
+/* ── 스타일 프리셋 ────────────────────────────────── */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.preset-button { width: 100%; font-weight: 700; }
+
+/* ── 외곽선 조절 ──────────────────────────────────── */
+.stroke-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.stroke-color-label { font-size: 13px; color: var(--muted); }

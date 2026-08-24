@@ -26,6 +26,8 @@ export const LIMITS = {
   lineHeight: { min: 0.8, max: 3, step: 0.05 },
   textX: { min: 0, max: 1, step: 0.001 },
   textY: { min: 0, max: 1, step: 0.001 },
+  // 외곽선 굵기는 글자 크기에 대한 비율이다. 크기를 바꿔도 두께 인상이 유지된다.
+  strokeWidth: { min: 0, max: 0.25, step: 0.005 },
   textMaxLength: 2000,
   nameMaxLength: 60,
 };
@@ -60,6 +62,10 @@ export function createInitialState() {
     textY: 0.5,
     fontSize: 140,
     color: '#ffffff',
+    // 자막처럼 검은 외곽선을 기본으로 둔다. 어떤 배경 위에서도 글자가 읽히고,
+    // 결과물이 편집기 출력물이 아니라 짤처럼 보인다.
+    strokeWidth: 0.08,
+    strokeColor: '#000000',
     lineHeight: 1.25,
     align: 'center',
   };
@@ -88,6 +94,8 @@ export function clampState(state) {
     align: pickFrom(state.align, ALIGNS, base.align),
     bgColor: normalizeHexColor(state.bgColor, base.bgColor),
     color: normalizeHexColor(state.color, base.color),
+    strokeColor: normalizeHexColor(state.strokeColor, base.strokeColor),
+    strokeWidth: clampNumber(state.strokeWidth, LIMITS.strokeWidth, base.strokeWidth),
     transparentBg: Boolean(state.transparentBg),
     text: String(state.text ?? '').slice(0, LIMITS.textMaxLength),
     textX: clampNumber(state.textX, LIMITS.textX, base.textX),

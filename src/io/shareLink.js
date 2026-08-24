@@ -30,6 +30,8 @@ const SHARED_FIELDS = [
   'textY',
   'fontSize',
   'color',
+  'strokeWidth',
+  'strokeColor',
   'lineHeight',
   'align',
 ];

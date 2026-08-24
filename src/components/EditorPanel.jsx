@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { LIMITS, FITS, ALIGNS } from '../state/editorState.js';
+import { PRESETS } from '../state/presets.js';
 
 const FIT_LABEL = { cover: '가득 채우기', contain: '전체 보이기' };
 const ALIGN_LABEL = { left: '왼쪽', center: '가운데', right: '오른쪽' };
@@ -31,6 +32,7 @@ export default function EditorPanel({
   contrast,
   onChange,
   onApplySuggestedColor,
+  onUsePreset,
   onPickImage,
   onClearImage,
 }) {
@@ -46,6 +48,27 @@ export default function EditorPanel({
   return (
     <section className="panel panel-editor" aria-labelledby="editor-heading">
       <h2 id="editor-heading">편집</h2>
+
+      <div className="field">
+        <span className="field-label">스타일</span>
+        <div className="preset-grid">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className="preset-button"
+              title={preset.hint}
+              onClick={() => onUsePreset(preset.id)}
+            >
+              {preset.name}
+            </button>
+          ))}
+        </div>
+        <p className="hint">
+          한 번 누르면 색·테두리·크기·위치가 함께 바뀝니다. 쓰던 문구와 이미지는
+          그대로 둡니다.
+        </p>
+      </div>
 
       <div className="field">
         <label htmlFor="image-input">배경 이미지 (PNG · JPEG)</label>
@@ -169,6 +192,32 @@ export default function EditorPanel({
           onChange={(event) => onChange({ color: event.target.value })}
         />
 
+        <div className="stroke-row">
+          <label htmlFor="stroke-color" className="stroke-color-label">
+            테두리 색
+          </label>
+          <input
+            id="stroke-color"
+            type="color"
+            value={state.strokeColor}
+            disabled={state.strokeWidth === 0}
+            onChange={(event) => onChange({ strokeColor: event.target.value })}
+          />
+        </div>
+
+        <Slider
+          id="stroke-width"
+          label="테두리 굵기"
+          value={state.strokeWidth}
+          display={
+            state.strokeWidth === 0
+              ? '없음'
+              : `${Math.round(state.strokeWidth * state.fontSize)}px`
+          }
+          limit={LIMITS.strokeWidth}
+          onChange={(strokeWidth) => onChange({ strokeWidth })}
+        />
+
         {contrast && (
           <div
             className={contrast.passes ? 'contrast-note ok' : 'contrast-note warn'}
@@ -178,7 +227,8 @@ export default function EditorPanel({
               {contrast.passes ? '읽기 좋음' : '읽기 어려움'}
             </span>
             <span>
-              배경과의 대비 {contrast.ratio.toFixed(1)}:1
+              {contrast.basis === 'stroke' ? '테두리' : '배경'}와의 대비{' '}
+              {contrast.ratio.toFixed(1)}:1
               {contrast.passes ? '' : ` — 기준 ${contrast.required}:1 에 못 미칩니다`}
             </span>
             {!contrast.passes && contrast.suggestion !== state.color && (
