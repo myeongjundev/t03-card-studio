@@ -27,6 +27,7 @@ export default function App() {
 
   const canvasRef = useRef(null);
   const imageUrlRef = useRef(null);
+  const imageRequestRef = useRef(0);
 
   // 폰트 로딩 전에 그리면 폴백 폰트로 측정되어 줄바꿈 위치가 달라진다.
   // 첫 렌더를 폰트 준비 이후로 미룬다.
@@ -220,10 +221,16 @@ export default function App() {
       return;
     }
 
+    const requestId = imageRequestRef.current + 1;
+    imageRequestRef.current = requestId;
     const url = URL.createObjectURL(file);
     const image = new Image();
 
     image.onload = () => {
+      if (requestId !== imageRequestRef.current) {
+        URL.revokeObjectURL(url);
+        return;
+      }
       // 새 이미지가 확실히 로드된 뒤에 이전 URL 을 해제한다.
       if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current);
       imageUrlRef.current = url;
@@ -236,6 +243,7 @@ export default function App() {
 
     image.onerror = () => {
       URL.revokeObjectURL(url);
+      if (requestId !== imageRequestRef.current) return;
       setNotice({
         type: 'error',
         text: '이미지를 읽지 못했습니다. 파일이 손상되었을 수 있습니다. 지금까지의 편집 내용은 그대로 있습니다.',
@@ -246,6 +254,7 @@ export default function App() {
   }, []);
 
   const clearImage = useCallback(() => {
+    imageRequestRef.current += 1;
     if (imageUrlRef.current) {
       URL.revokeObjectURL(imageUrlRef.current);
       imageUrlRef.current = null;

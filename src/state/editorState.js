@@ -33,6 +33,16 @@ export const LIMITS = {
 /** #rgb / #rrggbb 만 허용한다. 검증과 UI가 같은 기준을 쓰도록 여기에 둔다. */
 export const HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
+/** color input 과 Canvas가 항상 같은 값을 보도록 #rgb를 #rrggbb로 정규화한다. */
+export function normalizeHexColor(value, fallback) {
+  if (typeof value !== 'string' || !HEX_COLOR.test(value)) return fallback;
+  if (value.length === 4) {
+    const [, r, g, b] = value;
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return value.toLowerCase();
+}
+
 /**
  * 첫 방문자가 빈 화면을 보지 않도록 예제 값으로 시작한다.
  * 어디까지나 초기 표시 상태이며, 템플릿 CRUD 를 대신하지 않는다.
@@ -76,8 +86,8 @@ export function clampState(state) {
     ratio: pickFrom(state.ratio, RATIO_KEYS, base.ratio),
     fit: pickFrom(state.fit, FITS, base.fit),
     align: pickFrom(state.align, ALIGNS, base.align),
-    bgColor: HEX_COLOR.test(state.bgColor) ? state.bgColor : base.bgColor,
-    color: HEX_COLOR.test(state.color) ? state.color : base.color,
+    bgColor: normalizeHexColor(state.bgColor, base.bgColor),
+    color: normalizeHexColor(state.color, base.color),
     transparentBg: Boolean(state.transparentBg),
     text: String(state.text ?? '').slice(0, LIMITS.textMaxLength),
     textX: clampNumber(state.textX, LIMITS.textX, base.textX),

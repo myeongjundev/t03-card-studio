@@ -85,13 +85,17 @@ setState(patch)          ← 한 곳에서만 상태를 바꾼다
    ↓
 정규화 / 범위 clamp
    ↓
-requestAnimationFrame 으로 렌더 1회 예약 (연속 입력 시 중복 렌더 방지)
+React 커밋 뒤 useEffect에서 동기 렌더
    ↓
 renderCard(ctx, state)
    ↓
 캔버스 ─┬─ 화면
         └─ 다운로드
 ```
+
+렌더는 의도적으로 동기 실행한다. `requestAnimationFrame`으로 모으면 보이지 않는 탭에서
+콜백이 실행되지 않아 최신 상태가 그려지기 전에 빈 캔버스를 내려받을 수 있기 때문이다.
+다운로드 버튼이 항상 최신 Canvas를 가리킨다는 보장을 성능 최적화보다 우선한다.
 
 템플릿 쪽:
 

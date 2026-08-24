@@ -10,96 +10,123 @@ export const STORAGE_KEY = 't03-card-studio/templates';
  * 빈 목록으로 시작한다. (원칙 5.3)
  */
 
-function isAvailable() {
-  try {
-    const probe = '__t03_probe__';
-    window.localStorage.setItem(probe, '1');
-    window.localStorage.removeItem(probe);
-    return true;
-  } catch {
-    // 사생활 보호 모드나 저장소 차단 환경
-    return false;
-  }
-}
+// 손상 원본의 격리가 저장 공간 부족 등으로 실패하면, 후속 저장이 원본을
+// 덮어쓰지 못하게 막는다. 격리에 성공한 뒤에만 다시 저장할 수 있다.
+let pendingCorruptValue = null;
 
 function quarantine(rawValue) {
   try {
     const backupKey = `${STORAGE_KEY}.corrupt-${Date.now()}`;
     window.localStorage.setItem(backupKey, rawValue);
     window.localStorage.removeItem(STORAGE_KEY);
+    pendingCorruptValue = null;
     return backupKey;
   } catch {
+    pendingCorruptValue = rawValue;
     return null;
   }
+}
+
+function corruptResult(raw, reason, recovered = []) {
+  const backupKey = quarantine(raw);
+  return {
+    templates: recovered,
+    warning: backupKey
+      ? `${reason} 원본은 '${backupKey}' 에 보관했습니다.`
+      : `${reason} 원본을 보존하기 위해 격리 전까지 템플릿 저장을 중단합니다.`,
+  };
 }
 
 /**
  * @returns {{templates: object[], warning: string|null}}
  */
 export function loadTemplates() {
-  if (!isAvailable()) {
+  let raw;
+  try {
+    raw = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
     return {
       templates: [],
       warning:
         '이 브라우저에서는 저장소를 쓸 수 없어 템플릿이 유지되지 않습니다. 사생활 보호 모드인지 확인해 주세요.',
     };
   }
-
-  const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return { templates: [], warning: null };
 
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    const backupKey = quarantine(raw);
-    return {
-      templates: [],
-      warning: backupKey
-        ? `저장된 템플릿을 읽지 못해 빈 목록으로 시작합니다. 원본은 지우지 않고 '${backupKey}' 에 보관했습니다.`
-        : '저장된 템플릿을 읽지 못해 빈 목록으로 시작합니다.',
-    };
+    return corruptResult(raw, '저장된 템플릿을 읽지 못해 빈 목록으로 시작합니다.');
   }
 
   const list = Array.isArray(parsed?.templates) ? parsed.templates : null;
   if (!list) {
-    const backupKey = quarantine(raw);
-    return {
-      templates: [],
-      warning: backupKey
-        ? `저장된 템플릿의 형식이 올바르지 않아 빈 목록으로 시작합니다. 원본은 '${backupKey}' 에 보관했습니다.`
-        : '저장된 템플릿의 형식이 올바르지 않아 빈 목록으로 시작합니다.',
-    };
+    return corruptResult(
+      raw,
+      '저장된 템플릿의 형식이 올바르지 않아 빈 목록으로 시작합니다.'
+    );
   }
 
-  // 개별 항목이 깨졌다면 그 항목만 건너뛴다. 나머지 정상 템플릿은 살린다.
+  // 개별 항목 손상이나 중복 ID도 원본 전체를 먼저 격리한다.
   const templates = [];
   let skipped = 0;
+  let duplicateIds = 0;
+  const seenIds = new Set();
   list.forEach((item, index) => {
     const result = validateTemplate(item, index);
-    if (result.ok) templates.push(result.value);
-    else skipped += 1;
+    if (!result.ok) {
+      skipped += 1;
+      return;
+    }
+    if (seenIds.has(result.value.id)) {
+      duplicateIds += 1;
+      return;
+    }
+    seenIds.add(result.value.id);
+    templates.push(result.value);
   });
 
-  return {
-    templates,
-    warning:
-      skipped > 0
-        ? `저장된 템플릿 ${skipped}개는 형식이 맞지 않아 목록에서 제외했습니다.`
-        : null,
-  };
+  if (skipped > 0 || duplicateIds > 0) {
+    const details = [
+      skipped > 0 ? `형식이 맞지 않는 항목 ${skipped}개` : null,
+      duplicateIds > 0 ? `중복 ID 항목 ${duplicateIds}개` : null,
+    ].filter(Boolean).join(', ');
+    return corruptResult(
+      raw,
+      `저장된 템플릿에서 ${details}를 제외하고 정상 항목 ${templates.length}개를 복구했습니다.`,
+      templates
+    );
+  }
+
+  return { templates, warning: null };
 }
 
 /**
  * @returns {{ok: true} | {ok: false, message: string}}
  */
 export function saveTemplates(templates) {
-  if (!isAvailable()) {
+  if (pendingCorruptValue !== null && !quarantine(pendingCorruptValue)) {
     return {
       ok: false,
-      message: '이 브라우저에서는 저장소를 쓸 수 없어 템플릿을 저장하지 못했습니다.',
+      message: '손상된 기존 데이터를 아직 안전하게 격리하지 못해 저장을 중단했습니다. 저장 공간을 확보한 뒤 다시 시도해 주세요.',
     };
   }
+
+  const seenIds = new Set();
+  for (let index = 0; index < templates.length; index += 1) {
+    const result = validateTemplate(templates[index], index);
+    if (!result.ok || seenIds.has(result.value?.id)) {
+      return {
+        ok: false,
+        message: result.ok
+          ? '중복된 템플릿 ID가 있어 저장을 중단했습니다.'
+          : `${result.message} 저장을 중단했습니다.`,
+      };
+    }
+    seenIds.add(result.value.id);
+  }
+
   try {
     const payload = JSON.stringify({
       schemaVersion: SCHEMA_VERSION,

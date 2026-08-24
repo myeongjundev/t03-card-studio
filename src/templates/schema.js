@@ -4,6 +4,7 @@ import {
   ALIGNS,
   LIMITS,
   HEX_COLOR,
+  normalizeHexColor,
   createInitialState,
 } from '../state/editorState.js';
 
@@ -43,10 +44,6 @@ function checkNumber(value, key, limit, where) {
 }
 
 /** 값이 없거나 잘못되었을 때 기본값으로 대신할 수 있는 선택 항목. */
-function optionalChoice(value, allowed, fallback) {
-  return allowed.includes(value) ? value : fallback;
-}
-
 export function newTemplateId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -120,6 +117,19 @@ export function validateTemplate(raw, index = 0) {
       `${where}의 'color' 값 '${raw.color}' 이(가) 색상 형식이 아닙니다. (#ffffff 형태)`
     );
   }
+
+  if (raw.fit !== undefined && !FITS.includes(raw.fit)) {
+    return fail(`${where}의 'fit' 값 '${raw.fit}' 은(는) 지원하지 않습니다.`);
+  }
+  if (raw.align !== undefined && !ALIGNS.includes(raw.align)) {
+    return fail(`${where}의 'align' 값 '${raw.align}' 은(는) 지원하지 않습니다.`);
+  }
+  if (raw.transparentBg !== undefined && typeof raw.transparentBg !== 'boolean') {
+    return fail(`${where}의 'transparentBg' 은(는) true 또는 false여야 합니다.`);
+  }
+  if (raw.id !== undefined && (typeof raw.id !== 'string' || raw.id.trim() === '')) {
+    return fail(`${where}의 'id' 은(는) 비어 있지 않은 문자열이어야 합니다.`);
+  }
   if (
     raw.bgColor !== undefined &&
     raw.bgColor !== null &&
@@ -144,12 +154,12 @@ export function validateTemplate(raw, index = 0) {
       textX: raw.textX,
       textY: raw.textY,
       fontSize: raw.fontSize,
-      color: raw.color,
+      color: normalizeHexColor(raw.color, base.color),
       lineHeight,
-      bgColor: HEX_COLOR.test(raw.bgColor) ? raw.bgColor : base.bgColor,
-      transparentBg: Boolean(raw.transparentBg),
-      fit: optionalChoice(raw.fit, FITS, base.fit),
-      align: optionalChoice(raw.align, ALIGNS, base.align),
+      bgColor: normalizeHexColor(raw.bgColor, base.bgColor),
+      transparentBg: raw.transparentBg ?? base.transparentBg,
+      fit: raw.fit ?? base.fit,
+      align: raw.align ?? base.align,
     },
   };
 }
@@ -164,6 +174,11 @@ export function validateImportPayload(parsed) {
   }
   if (!Array.isArray(parsed.templates)) {
     return fail("'templates' 항목이 없거나 배열이 아닙니다.");
+  }
+  if (parsed.schemaVersion !== SCHEMA_VERSION) {
+    return fail(
+      `'schemaVersion'은(는) ${SCHEMA_VERSION}이어야 합니다. 현재 값: ${String(parsed.schemaVersion)}`
+    );
   }
   if (parsed.templates.length === 0) {
     return fail('파일에 가져올 템플릿이 없습니다.');

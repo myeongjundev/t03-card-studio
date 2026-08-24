@@ -19,8 +19,12 @@ export const FONT_STACK =
 export const TEXT_MAX_WIDTH_RATIO = 0.9;
 export const TEXT_MAX_HEIGHT_RATIO = 0.9;
 
-/** 자동 축소가 내려갈 수 있는 하한. 여기까지 줄여도 넘치면 더 줄이지 않는다. */
-const MIN_AUTO_FONT_SIZE = 8;
+/**
+ * 편집 UI의 최소값은 8px이지만, 수동 개행이 아주 많은 유효 입력도 잘리지 않도록
+ * 렌더링 전용 크기는 더 낮출 수 있다. 지정값은 바꾸지 않고 축소 사실을 알린다.
+ */
+const MIN_AUTO_FONT_SIZE = 0.1;
+const MAX_LAYOUT_ATTEMPTS = 96;
 
 function drawBackground(ctx, state, width, height) {
   ctx.clearRect(0, 0, width, height);
@@ -49,14 +53,14 @@ const blockHeightOf = (lineCount, fontSize, lineHeight) =>
  *
  * 줄이는 비율을 넘침 정도에서 계산하므로 보통 두세 번이면 수렴한다.
  */
-function layoutText(ctx, state, width, height) {
+export function layoutText(ctx, state, width, height) {
   const maxWidth = width * TEXT_MAX_WIDTH_RATIO;
   const maxHeight = height * TEXT_MAX_HEIGHT_RATIO;
 
   let fontSize = state.fontSize;
   let lines = [];
 
-  for (let attempt = 0; attempt < 24; attempt += 1) {
+  for (let attempt = 0; attempt < MAX_LAYOUT_ATTEMPTS; attempt += 1) {
     ctx.font = `700 ${fontSize}px ${FONT_STACK}`;
     lines = wrapText(ctx, state.text, maxWidth);
 
@@ -65,7 +69,7 @@ function layoutText(ctx, state, width, height) {
 
     // 한 번에 목표치까지 줄이되, 최소 10% 는 줄여 무한 반복을 막는다.
     const shrink = Math.min(0.9, maxHeight / blockHeight);
-    fontSize = Math.max(MIN_AUTO_FONT_SIZE, Math.floor(fontSize * shrink));
+    fontSize = Math.max(MIN_AUTO_FONT_SIZE, fontSize * shrink);
   }
 
   // 마지막으로 정해진 크기에 맞춰 줄을 다시 나눈다.
@@ -89,7 +93,10 @@ function drawText(ctx, state, width, height) {
 
   const lineStep = fontSize * state.lineHeight;
   const blockHeight = blockHeightOf(lines.length, fontSize, state.lineHeight);
-  const blockWidth = Math.max(0, ...lines.map((line) => ctx.measureText(line).width));
+  const blockWidth = lines.reduce(
+    (widest, line) => Math.max(widest, ctx.measureText(line).width),
+    0
+  );
 
   const marginX = (width * (1 - TEXT_MAX_WIDTH_RATIO)) / 2;
   const marginY = (height * (1 - TEXT_MAX_HEIGHT_RATIO)) / 2;

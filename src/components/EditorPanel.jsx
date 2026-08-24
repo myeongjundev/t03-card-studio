@@ -125,7 +125,7 @@ export default function EditorPanel({
       {layout?.shrunk && (
         <p className="hint shrink-hint">
           문구가 길어 화면에 다 들어오지 않아 {state.fontSize}px 대신{' '}
-          <strong>{layout.fontSize}px</strong> 로 그렸습니다. 내려받는 파일도
+          <strong>{layout.fontSize < 10 ? layout.fontSize.toFixed(2) : Math.round(layout.fontSize)}px</strong> 로 그렸습니다. 내려받는 파일도
           같습니다.
         </p>
       )}
