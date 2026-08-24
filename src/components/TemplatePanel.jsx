@@ -17,6 +17,8 @@ export default function TemplatePanel({
   onEdit,
   onDelete,
   onCancelEdit,
+  onExportJson,
+  onImportJson,
 }) {
   const editing = templates.find((template) => template.id === editingId) ?? null;
   const canSave = name.trim() !== '';
@@ -103,6 +105,36 @@ export default function TemplatePanel({
           ))}
         </ul>
       )}
+
+      <h3 className="subheading">JSON 백업</h3>
+
+      <div className="button-row">
+        <button
+          type="button"
+          onClick={onExportJson}
+          disabled={templates.length === 0}
+        >
+          JSON 내보내기
+        </button>
+      </div>
+
+      <div className="field" style={{ marginTop: 10 }}>
+        <label htmlFor="json-input">JSON 가져오기</label>
+        <input
+          id="json-input"
+          type="file"
+          accept="application/json,.json"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) onImportJson(file);
+          }}
+        />
+        <p className="hint">
+          파일을 모두 확인한 뒤에만 저장합니다. 형식이 맞지 않으면 가져오기를
+          중단하고 지금 저장된 템플릿을 그대로 둡니다.
+        </p>
+      </div>
     </section>
   );
 }

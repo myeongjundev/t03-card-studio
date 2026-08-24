@@ -6,6 +6,7 @@ import {
 } from './state/editorState.js';
 import { renderCard } from './render/renderCard.js';
 import { buildFileName, downloadCanvas } from './io/exportImage.js';
+import { downloadTemplatesJson, readTemplatesFile } from './io/templateFile.js';
 import { loadTemplates, saveTemplates } from './templates/storage.js';
 import { templateFromState, stateFromTemplate } from './templates/schema.js';
 import EditorPanel from './components/EditorPanel.jsx';
@@ -162,6 +163,52 @@ export default function App() {
     setTemplateName('');
   }, []);
 
+  const exportJson = useCallback(() => {
+    if (templates.length === 0) return;
+    const bytes = downloadTemplatesJson(templates);
+    setNotice({
+      type: 'success',
+      text: `템플릿 ${templates.length}개를 JSON 파일로 내보냈습니다. (${Math.max(1, Math.round(bytes / 1024))}KB)`,
+    });
+  }, [templates]);
+
+  /**
+   * 가져오기.
+   *
+   * 검증이 끝나기 전에는 어떤 저장도 하지 않는다. readTemplatesFile 은 검증
+   * 결과만 돌려주고, 여기서 성공을 확인한 뒤에야 저장을 시도한다.
+   * 실패하면 기존 템플릿도, 현재 편집 내용도 건드리지 않는다.
+   */
+  const importJson = useCallback(
+    async (file) => {
+      const result = await readTemplatesFile(file);
+
+      if (!result.ok) {
+        setNotice({ type: 'error', text: result.message });
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `가져온 템플릿 ${result.templates.length}개로 교체할까요?\n` +
+          `지금 저장된 템플릿 ${templates.length}개는 사라집니다.\n` +
+          '취소하면 아무것도 바뀌지 않습니다.'
+      );
+      if (!confirmed) {
+        setNotice({
+          type: 'success',
+          text: '가져오기를 취소했습니다. 기존 템플릿은 그대로 있습니다.',
+        });
+        return;
+      }
+
+      if (commitTemplates(result.templates, `템플릿 ${result.templates.length}개를 가져왔습니다.`)) {
+        setEditingId(null);
+        setTemplateName('');
+      }
+    },
+    [commitTemplates, templates.length]
+  );
+
   const pickImage = useCallback((file) => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setNotice({
@@ -271,6 +318,8 @@ export default function App() {
           onEdit={(id) => applyTemplate(id, true)}
           onDelete={deleteTemplate}
           onCancelEdit={cancelEdit}
+          onExportJson={exportJson}
+          onImportJson={importJson}
         />
       </div>
     </div>
