@@ -19,6 +19,7 @@ export default function App() {
   const [state, setState] = useState(createInitialState);
   const [notice, setNotice] = useState(null);
   const [fontsReady, setFontsReady] = useState(false);
+  const [layout, setLayout] = useState(null);
 
   const [templates, setTemplates] = useState([]);
   const [templateName, setTemplateName] = useState('');
@@ -57,7 +58,8 @@ export default function App() {
     // 캔버스 크기 대입은 내용을 초기화하므로 실제로 달라졌을 때만 한다.
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
-    renderCard(canvas.getContext('2d'), state, width, height);
+    // 자동 축소가 일어났는지 화면에 알리기 위해 렌더 결과를 받아 둔다.
+    setLayout(renderCard(canvas.getContext('2d'), state, width, height));
   }, [state, fontsReady]);
 
   // 페이지를 벗어날 때 남아 있는 objectURL 을 정리한다.
@@ -297,6 +299,7 @@ export default function App() {
         <EditorPanel
           state={state}
           onChange={update}
+          layout={layout}
           onPickImage={pickImage}
           onClearImage={clearImage}
         />

@@ -259,3 +259,13 @@ button.small { padding: 5px 10px; font-size: 13px; }
 .template-info { display: flex; flex-direction: column; margin-bottom: 8px; }
 .template-name { font-weight: 700; word-break: break-word; }
 .template-meta { color: var(--muted); font-size: 12.5px; }
+
+/* 자동 축소 안내. 사용자가 지정한 크기와 실제 크기가 다를 때만 나타난다. */
+.shrink-hint {
+  padding: 8px 10px;
+  margin-top: -6px;
+  background: var(--panel-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+}

@@ -25,7 +25,13 @@ function Slider({ id, label, value, display, limit, onChange }) {
   );
 }
 
-export default function EditorPanel({ state, onChange, onPickImage, onClearImage }) {
+export default function EditorPanel({
+  state,
+  layout,
+  onChange,
+  onPickImage,
+  onClearImage,
+}) {
   const fileRef = useRef(null);
 
   const handleFile = (event) => {
@@ -116,6 +122,14 @@ export default function EditorPanel({ state, onChange, onPickImage, onClearImage
         limit={LIMITS.fontSize}
         onChange={(fontSize) => onChange({ fontSize })}
       />
+      {layout?.shrunk && (
+        <p className="hint shrink-hint">
+          문구가 길어 화면에 다 들어오지 않아 {state.fontSize}px 대신{' '}
+          <strong>{layout.fontSize}px</strong> 로 그렸습니다. 내려받는 파일도
+          같습니다.
+        </p>
+      )}
+
       <Slider
         id="line-height"
         label="줄 간격"
