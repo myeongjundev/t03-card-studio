@@ -1,0 +1,274 @@
+# T03 짤·카드 스튜디오 — 구현 설계
+
+구현 전에 확정한 데이터 흐름과 화면 구조. 코드를 쓰기 전에 여기서 결정을 끝내고,
+구현 중 설계를 바꿔야 하면 이 문서를 먼저 고친다.
+
+---
+
+## 1. 가장 중요한 설계 결정 — 미리보기와 다운로드를 "같게 만들지" 않고 "같은 것으로" 만든다
+
+카드 2의 통과 기준은 미리보기와 다운로드 결과가 일치하는 것이다.
+두 개의 렌더링 경로를 만들어 놓고 결과를 맞추려 하면 반드시 어긋난다.
+
+그래서 다음과 같이 한다.
+
+- 미리보기 `<canvas>`의 **내부 해상도를 출력 해상도와 동일하게** 잡는다. (1:1이면 1080×1080)
+- 화면에는 CSS `width`로 축소해서 보여준다. (내부 해상도 ≠ CSS 표시 크기)
+- 다운로드는 **그 캔버스를 그대로** `toBlob()` 한다. 다시 그리지 않는다.
+
+결과적으로 미리보기와 다운로드 파일은 *비슷한* 것이 아니라 **동일한 픽셀**이다.
+일치 여부를 검증할 필요조차 없는 구조로 만드는 것이 목적이다.
+
+```text
+                    ┌─────────────────────────┐
+EditorState ──────► │ renderCard(ctx, state)  │ ──► 1080×H 캔버스 (단 하나)
+                    └─────────────────────────┘        │
+                                                       ├─ CSS 축소 → 화면 미리보기
+                                                       └─ toBlob() → PNG 다운로드
+```
+
+부작용으로 9:16은 1080×1920 캔버스를 DOM에 두게 된다(약 8MB). 허용 범위로 판단한다.
+
+---
+
+## 2. 좌표계
+
+캔버스 폭은 어떤 비율에서도 항상 **1080px**로 고정한다. 높이만 비율에 따라 달라진다.
+
+| 비율 | 출력 크기 |
+|------|-----------|
+| 1:1  | 1080 × 1080 |
+| 4:5  | 1080 × 1350 |
+| 9:16 | 1080 × 1920 |
+
+- **문구 위치**: 정규화 좌표 `x, y ∈ [0, 1]`로 저장하고 그릴 때 `x * W`, `y * H`로 환산한다.
+  비율을 바꿔도 상대 위치가 유지된다.
+- **글자 크기**: 1080 기준 px 절대값으로 저장한다. 폭이 항상 1080이라 환산이 필요 없다.
+- **기준점**: `textAlign = 'center'`, `textBaseline = 'middle'`로 통일한다.
+  여러 줄일 때는 전체 블록의 세로 중앙이 `y * H`에 오도록 배치한다.
+
+---
+
+## 3. 상태 모델
+
+하나의 `EditorState`만 진실의 원천으로 둔다. 같은 값을 두 곳에서 관리하지 않는다.
+
+```js
+EditorState = {
+  ratio:      '1:1' | '4:5' | '9:16',
+  image:      HTMLImageElement | null,   // 저장 대상 아님 (런타임 전용)
+  imageName:  string,                    // 화면 표시용
+  fit:        'cover' | 'contain',
+  bgColor:    string,                    // contain 여백 / 이미지 없을 때 배경
+  text:       string,
+  textX:      number,   // 0 ~ 1
+  textY:      number,   // 0 ~ 1
+  fontSize:   number,   // 1080 기준 px
+  color:      string,
+  lineHeight: number,   // fontSize 배수
+  align:      'left' | 'center' | 'right',
+}
+```
+
+이미지는 템플릿에 저장하지 않는다. 원칙 11(로컬 처리 우선)과 localStorage 용량 제약 때문이다.
+템플릿을 불러오면 "문구·배치 설정"이 복원되고 이미지는 사용자가 다시 고른다.
+이 점은 화면에 명시한다 — 조용히 빠뜨리면 가짜 기능이 된다.
+
+---
+
+## 4. 데이터 흐름
+
+```text
+사용자 입력 (input/change 이벤트)
+   ↓
+setState(patch)          ← 한 곳에서만 상태를 바꾼다
+   ↓
+정규화 / 범위 clamp
+   ↓
+requestAnimationFrame 으로 렌더 1회 예약 (연속 입력 시 중복 렌더 방지)
+   ↓
+renderCard(ctx, state)
+   ↓
+캔버스 ─┬─ 화면
+        └─ 다운로드
+```
+
+템플릿 쪽:
+
+```text
+현재 EditorState → toTemplate() → validateTemplate() → localStorage 저장 → 목록 갱신
+목록에서 선택 → applyTemplate() → setState() → 렌더
+```
+
+---
+
+## 5. 렌더 순서 (renderCard)
+
+1. 캔버스 크기를 비율에 맞게 설정 (변경된 경우에만 — `width` 대입은 캔버스를 초기화한다)
+2. `clearRect` 후 배경색 채우기 — **투명 PNG 테스트를 위해 배경을 투명으로 두는 옵션 필요**
+3. 이미지가 있으면 `fit` 계산에 따라 그리기
+4. 문구를 줄바꿈 계산 후 그리기
+5. 폰트는 그리기 전에 `document.fonts.ready`를 기다린다 (미로딩 폰트로 export 되는 문제 방지)
+
+### cover / contain 계산
+
+```js
+const scale = fit === 'cover'
+  ? Math.max(W / img.width, H / img.height)
+  : Math.min(W / img.width, H / img.height);
+const dw = img.width * scale, dh = img.height * scale;
+const dx = (W - dw) / 2,      dy = (H - dh) / 2;
+```
+
+`cover`는 넘치는 부분이 잘리고, `contain`은 여백이 생긴다. 여백은 `bgColor`로 채운다.
+세로 이미지·가로 이미지 테스트(테스트 10·11)가 여기서 검증된다.
+
+### 줄바꿈
+
+한국어에는 단어 경계가 거의 없어서 영어식 공백 단위 줄바꿈만으로는 긴 한글이 그대로 넘친다.
+카드 3의 대표 결함이 나올 가능성이 가장 높은 지점이다.
+
+- 1차: 사용자가 직접 넣은 `\n`을 먼저 분리한다 (수동 줄바꿈 유지 — 테스트 04)
+- 2차: 각 줄을 `Intl.Segmenter(granularity: 'grapheme')`로 쪼갠다.
+  이모지·결합 문자를 반쪽으로 자르지 않기 위함이다 (테스트 05)
+- 3차: 공백이 있으면 단어 단위로 먼저 시도하고, 한 단어가 최대 폭을 넘으면 그래핀 단위로 강제 분해한다
+  (긴 영문 — 테스트 02, 한영 혼합 — 테스트 03)
+- 최대 폭은 캔버스 폭의 90%로 잡는다.
+
+---
+
+## 6. 템플릿 스키마 / 저장
+
+```js
+// localStorage key: 't03-card-studio/templates'
+{
+  schemaVersion: 1,
+  templates: [
+    {
+      id: string,          // crypto.randomUUID()
+      name: string,
+      createdAt: string,   // ISO
+      updatedAt: string,
+      ratio, fit, bgColor, text, textX, textY,
+      fontSize, color, lineHeight, align
+    }
+  ]
+}
+```
+
+- 저장 전에 반드시 검증을 통과시킨다.
+- localStorage 값이 깨져 있으면(파싱 실패 등) 앱을 죽이지 않고 빈 목록으로 시작하되,
+  **원본을 지우지 않고** `t03-card-studio/templates.corrupt-<timestamp>`로 옮겨 보존한다.
+  원칙 5.3 — 오류가 났다고 사용자 데이터를 삭제하지 않는다.
+- 수정과 신규 생성을 반드시 구분한다. `id`가 있으면 갱신, 없으면 생성.
+
+---
+
+## 7. JSON 가져오기 — 검증 파이프라인
+
+카드 5의 채점 포인트는 기능이 아니라 **순서**다. 아래 순서를 코드에서도 그대로 지킨다.
+
+```text
+1. 파일 읽기          (실패 → 중단, 기존 데이터 그대로)
+2. JSON.parse         (실패 → "JSON 문법이 올바르지 않습니다", 기존 데이터 그대로)
+3. 최상위 구조 검증    (templates가 배열인가)
+4. 항목별 필수 필드 검증
+5. 항목별 타입 검증
+6. 항목별 값 범위 검증  (ratio가 세 값 중 하나인가, 0 ≤ textX ≤ 1, fontSize 범위, 색상 형식)
+7. 전부 통과한 경우에만 → localStorage 커밋
+```
+
+핵심: **6번까지 끝나기 전에는 localStorage와 현재 편집 상태를 건드리지 않는다.**
+검증은 순수 함수로 분리해서 원본 데이터에 접근조차 하지 않게 만든다.
+
+실패 시 메시지는 원인과 다음 행동을 함께 알려준다.
+
+> JSON 문법이 올바르지 않아 가져오기를 중단했습니다. 기존 템플릿 3개는 그대로 있습니다.
+
+> 2번째 템플릿에 `ratio` 값이 없어 가져오기를 중단했습니다. 기존 템플릿은 변경되지 않았습니다.
+
+부분 성공(일부만 가져오기)은 하지 않는다. 전부 성공 또는 전부 거부.
+
+---
+
+## 8. 화면 구조
+
+원칙 3 — 필수 조작이 전부 첫 화면에 보여야 한다. 원칙 16 — 세 영역을 분리한다.
+
+```text
+┌───────────────────────────────────────────────────────────────┐
+│  헤더: 제목 + 개인정보 주의 안내 (이미지는 브라우저 안에서만 처리) │
+├──────────────────┬──────────────────┬─────────────────────────┤
+│ 편집             │ 미리보기          │ 템플릿 · 파일            │
+│                  │                  │                         │
+│ 이미지 선택      │ [1:1][4:5][9:16] │ 템플릿 이름 [입력]       │
+│ 맞춤 cover/contain│                  │ [템플릿 저장]            │
+│ 문구 [textarea]  │   ┌──────────┐   │ ─ 저장된 템플릿 ─        │
+│ X 위치 [슬라이더]│   │  canvas  │   │  이름  [불러오기][수정][삭제]│
+│ Y 위치 [슬라이더]│   │          │   │  ...                    │
+│ 크기   [슬라이더]│   └──────────┘   │                         │
+│ 색상   [color]   │                  │ [JSON 내보내기]          │
+│ 줄간격 [슬라이더]│  [이미지 다운로드]│ [JSON 가져오기]          │
+└──────────────────┴──────────────────┴─────────────────────────┘
+```
+
+좁은 화면에서는 세 열이 세로로 쌓이되, 미리보기가 편집 영역 바로 아래 오도록 순서를 잡는다.
+
+첫 방문자가 빈 화면을 보지 않도록 **기본 예제 상태**로 시작한다
+(문구가 들어간 그라데이션 배경). 강사가 접속하자마자 문구·색상을 한 번 바꿔
+즉시 반영되는 것을 확인할 수 있어야 한다 — 체크리스트 1장의 판정 동선.
+
+단, 이 기본 예제는 **표시용 초기 상태**일 뿐 템플릿 CRUD의 대체물이 아니다(원칙 5.2).
+
+---
+
+## 9. 파일 구조
+
+```text
+t03-card-studio/
+├─ index.html
+├─ vite.config.js          # GitHub Pages base 경로 설정
+├─ package.json
+├─ docs/
+│  ├─ ARCHITECTURE.md      # 이 문서
+│  ├─ TEST-EDGE-CASES.md   # 극단 입력 12개 검사표 (카드 3)
+│  └─ VERIFICATION.md      # 강사용 검증 안내서
+├─ public/
+│  └─ sample/              # 테스트용 직접 제작 이미지 (세로/가로/투명 PNG)
+└─ src/
+   ├─ main.jsx
+   ├─ App.jsx
+   ├─ state/
+   │  └─ editorState.js    # 초기 상태, clamp, 상수(비율/범위)
+   ├─ render/
+   │  ├─ renderCard.js     # 유일한 렌더 함수
+   │  ├─ fitImage.js       # cover / contain 계산
+   │  └─ wrapText.js       # 줄바꿈 (그래핀 단위)
+   ├─ templates/
+   │  ├─ storage.js        # localStorage CRUD
+   │  └─ schema.js         # 검증 (순수 함수)
+   ├─ io/
+   │  ├─ exportImage.js
+   │  └─ importJson.js
+   └─ components/
+      ├─ EditorPanel.jsx
+      ├─ PreviewPanel.jsx
+      └─ TemplatePanel.jsx
+```
+
+---
+
+## 10. 구현 순서와 커밋 계획
+
+| Phase | 내용 | 커밋 |
+|-------|------|------|
+| 1 | 프로젝트 생성, 레이아웃, 상태 모델, 렌더러 골격 | `chore: scaffold vite react project` |
+| 2 | 카드 1 — 이미지 업로드, 문구/위치/크기/색상, 실시간 반영 | `feat: implement image and text editor` |
+| 3 | 카드 2 — 세 비율 + 다운로드 | `feat: add canvas ratio presets` / `feat: add image export` |
+| 4 | 카드 4 — 템플릿 CRUD + 영속성 | `feat: add template CRUD` |
+| 5 | 카드 5 — JSON 내보내기/가져오기 + 검증 | `feat: add JSON import export` / `fix: preserve templates on invalid JSON` |
+| 6 | 카드 3 — 극단 입력 12개 검사 및 결함 수정 | `test: verify 12 edge cases` / `fix: ...` |
+| 7 | UX·접근성·배포·검증 안내서 | `docs: add verification guide` |
+
+각 Phase가 끝나면 브라우저에서 직접 확인한 뒤 커밋한다.
+문서 원칙대로, 테스트를 Phase 6까지 미루지 않고 각 기능 직후에도 그 자리에서 확인한다.
