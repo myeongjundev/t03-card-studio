@@ -7,6 +7,7 @@ import {
 import { renderCard } from './render/renderCard.js';
 import { checkTextContrast } from './render/contrast.js';
 import { buildFileName, downloadCanvas, copyCanvasImage } from './io/exportImage.js';
+import { downloadAllRatios } from './io/exportAllRatios.js';
 import { PRESETS, applyPreset } from './state/presets.js';
 import { buildShareUrl, readShareUrl, copyToClipboard } from './io/shareLink.js';
 import { downloadTemplatesJson, readTemplatesFile } from './io/templateFile.js';
@@ -379,6 +380,31 @@ export default function App() {
     }
   }, [state.ratio]);
 
+  /**
+   * 세 비율을 한 번에 내려받는다.
+   *
+   * 현재 보이는 비율은 미리보기 캔버스에서 다운로드로 바로 이어지지만,
+   * 나머지 두 비율은 화면에 그려져 있지 않으므로 downloadAllRatios 안에서
+   * 새로 그린다. renderCard 를 그대로 재사용하고 컨텍스트 설정(willReadFrequently)도
+   * 미리보기와 맞춰서, 세 파일 모두 미리보기와 같은 방식으로 만들어진다.
+   */
+  const [batchDownloading, setBatchDownloading] = useState(false);
+
+  const handleDownloadAll = useCallback(async () => {
+    setBatchDownloading(true);
+    try {
+      const result = await downloadAllRatios(state);
+      setNotice({
+        type: result.ok ? 'success' : 'error',
+        text: result.ok
+          ? `세 비율 이미지를 모두 내려받았습니다. (${result.files.length}개)`
+          : result.message,
+      });
+    } finally {
+      setBatchDownloading(false);
+    }
+  }, [state]);
+
   return (
     <div className="app">
       <header className="masthead">
@@ -421,6 +447,8 @@ export default function App() {
           onChange={update}
           onMoveText={moveText}
           onDownload={handleDownload}
+          onDownloadAll={handleDownloadAll}
+          batchDownloading={batchDownloading}
           onCopyImage={copyImage}
           onShare={shareLink}
           canDownload={fontsReady}

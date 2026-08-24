@@ -19,6 +19,8 @@ const PreviewPanel = forwardRef(function PreviewPanel(
     onChange,
     onMoveText,
     onDownload,
+    onDownloadAll,
+    batchDownloading,
     onCopyImage,
     onShare,
     canDownload,
@@ -142,6 +144,14 @@ const PreviewPanel = forwardRef(function PreviewPanel(
             disabled={!canDownload}
           >
             이미지 다운로드
+          </button>
+          <button
+            type="button"
+            onClick={onDownloadAll}
+            disabled={!canDownload || batchDownloading}
+            title="1:1, 4:5, 9:16 세 파일을 한 번에 내려받습니다"
+          >
+            {batchDownloading ? '내려받는 중…' : '세 비율 모두 저장'}
           </button>
         </div>
       </div>
