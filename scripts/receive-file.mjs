@@ -9,7 +9,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'sample');
+const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'evidence');
 mkdirSync(OUT_DIR, { recursive: true });
 
 createServer((req, res) => {

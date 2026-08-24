@@ -20,3 +20,7 @@ npm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# 테스트 중 브라우저가 내려받은 결과물 (제출 증거는 docs/evidence 에 둔다)
+/card-studio-templates.json
+/card-*.png
