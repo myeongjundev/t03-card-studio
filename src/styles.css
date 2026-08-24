@@ -295,3 +295,9 @@ button.small { padding: 5px 10px; font-size: 13px; }
 .contrast-note.ok .contrast-tag { background: var(--ok); color: var(--accent-ink); }
 .contrast-note.warn { border-color: var(--danger); }
 .contrast-note.warn .contrast-tag { background: var(--danger); color: var(--accent-ink); }
+
+/* ── 캔버스에서 문구 끌기 ─────────────────────────── */
+/* 터치로 끌 때 페이지가 함께 스크롤되지 않도록 막는다. */
+.canvas-frame canvas { touch-action: none; }
+.canvas-frame canvas.grabbable { cursor: grab; }
+.canvas-frame canvas.dragging { cursor: grabbing; }

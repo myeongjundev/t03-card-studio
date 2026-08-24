@@ -321,6 +321,15 @@ export default function App() {
     });
   }, [state]);
 
+  /**
+   * 캔버스에서 문구를 끌어 옮긴다.
+   * 값의 범위 제한은 clampState 가 맡으므로 여기서는 그대로 넘긴다.
+   */
+  const moveText = useCallback(
+    (textX, textY) => update({ textX, textY }),
+    [update]
+  );
+
   /** 대비 검사가 제안한 색을 그대로 적용한다. */
   const applySuggestedColor = useCallback(() => {
     if (!contrast?.suggestion) return;
@@ -381,7 +390,9 @@ export default function App() {
         <PreviewPanel
           ref={canvasRef}
           state={state}
+          textArea={layout?.area ?? null}
           onChange={update}
+          onMoveText={moveText}
           onDownload={handleDownload}
           onShare={shareLink}
           canDownload={fontsReady}
