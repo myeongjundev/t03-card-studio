@@ -63,7 +63,12 @@ export default function App() {
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
 
-    const ctx = canvas.getContext('2d');
+    // 가독성 검사가 매 렌더마다 getImageData 로 픽셀을 읽는다.
+    // willReadFrequently 를 켜지 않으면 브라우저가 읽기 부담을 감지한 뒤
+    // GPU 에서 CPU 래스터화로 몰래 갈아타고, 그 순간 글자 가장자리
+    // 안티에일리어싱이 미세하게 달라진다. 같은 설정인데 결과가 달라지는 셈이라
+    // 처음부터 CPU 쪽으로 고정해 렌더 결과를 일정하게 유지한다.
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     // 자동 축소가 일어났는지 화면에 알리기 위해 렌더 결과를 받아 둔다.
     const result = renderCard(ctx, state, width, height);
     setLayout(result);
