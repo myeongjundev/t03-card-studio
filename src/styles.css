@@ -269,3 +269,29 @@ button.small { padding: 5px 10px; font-size: 13px; }
   border-radius: 6px;
   color: var(--text);
 }
+
+/* ── 가독성 검사 ──────────────────────────────────── */
+.contrast-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  font-size: 13px;
+}
+/* 색만으로 구분하지 않도록 문구 배지를 함께 쓴다. */
+.contrast-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+}
+.contrast-note.ok { border-color: var(--ok); }
+.contrast-note.ok .contrast-tag { background: var(--ok); color: var(--accent-ink); }
+.contrast-note.warn { border-color: var(--danger); }
+.contrast-note.warn .contrast-tag { background: var(--danger); color: var(--accent-ink); }

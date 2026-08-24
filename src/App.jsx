@@ -5,7 +5,9 @@ import {
   getCanvasSize,
 } from './state/editorState.js';
 import { renderCard } from './render/renderCard.js';
+import { checkTextContrast } from './render/contrast.js';
 import { buildFileName, downloadCanvas } from './io/exportImage.js';
+import { buildShareUrl, readShareUrl, copyToClipboard } from './io/shareLink.js';
 import { downloadTemplatesJson, readTemplatesFile } from './io/templateFile.js';
 import { loadTemplates, saveTemplates } from './templates/storage.js';
 import { templateFromState, stateFromTemplate } from './templates/schema.js';
@@ -20,6 +22,7 @@ export default function App() {
   const [notice, setNotice] = useState(null);
   const [fontsReady, setFontsReady] = useState(false);
   const [layout, setLayout] = useState(null);
+  const [contrast, setContrast] = useState(null);
 
   const [templates, setTemplates] = useState([]);
   const [templateName, setTemplateName] = useState('');
@@ -59,9 +62,36 @@ export default function App() {
     // 캔버스 크기 대입은 내용을 초기화하므로 실제로 달라졌을 때만 한다.
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
     // 자동 축소가 일어났는지 화면에 알리기 위해 렌더 결과를 받아 둔다.
-    setLayout(renderCard(canvas.getContext('2d'), state, width, height));
+    const result = renderCard(ctx, state, width, height);
+    setLayout(result);
+
+    // 다 그린 뒤에 실제 픽셀을 읽어 문구가 읽히는지 판정한다.
+    // 추측이 아니라 화면에 나온 그대로를 재는 것이라, 이미지 위에서도 정확하다.
+    setContrast(
+      result.area
+        ? checkTextContrast(ctx, result.area, state.color, result.fontSize)
+        : null
+    );
   }, [state, fontsReady]);
+
+  // 주소에 공유 링크가 있으면 열어 준다. 첫 렌더 때 한 번만 확인한다.
+  useEffect(() => {
+    const result = readShareUrl(createInitialState());
+    if (!result) return;
+
+    if (!result.ok) {
+      setNotice({ type: 'error', text: result.message });
+      return;
+    }
+    setState(clampState(result.state));
+    setNotice({
+      type: 'success',
+      text: '공유 링크로 카드를 열었습니다. 배경 이미지는 링크에 담기지 않으니 필요하면 다시 골라 주세요.',
+    });
+  }, []);
 
   // 페이지를 벗어날 때 남아 있는 objectURL 을 정리한다.
   useEffect(
@@ -263,6 +293,35 @@ export default function App() {
     setNotice({ type: 'success', text: '배경 이미지를 제거했습니다.' });
   }, []);
 
+  /**
+   * 공유 링크를 만들어 클립보드에 넣는다.
+   *
+   * 주소창도 함께 바꿔 두어, 클립보드가 막힌 환경에서는 주소를 직접
+   * 복사할 수 있게 한다. history.replaceState 라 뒤로가기 기록은 쌓이지 않는다.
+   */
+  const shareLink = useCallback(async () => {
+    const result = buildShareUrl(state);
+    if (!result.ok) {
+      setNotice({ type: 'error', text: result.message });
+      return;
+    }
+
+    window.history.replaceState(null, '', result.url);
+    const copied = await copyToClipboard(result.url);
+    setNotice({
+      type: copied ? 'success' : 'error',
+      text: copied
+        ? '카드 링크를 복사했습니다. 링크를 연 사람은 이 카드를 그대로 보고 수정할 수 있습니다. (배경 이미지는 담기지 않습니다)'
+        : '클립보드에 넣지 못했습니다. 주소창의 주소를 직접 복사해 주세요.',
+    });
+  }, [state]);
+
+  /** 대비 검사가 제안한 색을 그대로 적용한다. */
+  const applySuggestedColor = useCallback(() => {
+    if (!contrast?.suggestion) return;
+    update({ color: contrast.suggestion });
+  }, [contrast, update]);
+
   const handleDownload = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -309,6 +368,8 @@ export default function App() {
           state={state}
           onChange={update}
           layout={layout}
+          contrast={contrast}
+          onApplySuggestedColor={applySuggestedColor}
           onPickImage={pickImage}
           onClearImage={clearImage}
         />
@@ -317,6 +378,7 @@ export default function App() {
           state={state}
           onChange={update}
           onDownload={handleDownload}
+          onShare={shareLink}
           canDownload={fontsReady}
         />
         <TemplatePanel

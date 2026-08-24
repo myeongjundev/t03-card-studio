@@ -82,7 +82,7 @@ export function layoutText(ctx, state, width, height) {
 const clamp = (value, min, max) => (max < min ? min : Math.min(Math.max(value, min), max));
 
 function drawText(ctx, state, width, height) {
-  const empty = { lineCount: 0, fontSize: state.fontSize, shrunk: false };
+  const empty = { lineCount: 0, fontSize: state.fontSize, shrunk: false, area: null };
   if (String(state.text ?? '').trim() === '') return empty; // 빈 문구여도 앱이 깨지지 않는다
 
   ctx.textBaseline = 'middle';
@@ -123,10 +123,22 @@ function drawText(ctx, state, width, height) {
     ctx.fillText(line, x, firstY + index * lineStep);
   });
 
+  // 가독성 검사가 읽을 수 있도록 문구가 차지한 사각형을 함께 돌려준다.
+  // 캔버스 밖으로 나가지 않게 잘라 두어야 getImageData 가 실패하지 않는다.
+  const areaX = Math.max(0, Math.floor(left));
+  const areaY = Math.max(0, Math.floor(top));
+  const area = {
+    x: areaX,
+    y: areaY,
+    width: Math.max(1, Math.min(Math.ceil(blockWidth), width - areaX)),
+    height: Math.max(1, Math.min(Math.ceil(blockHeight), height - areaY)),
+  };
+
   return {
     lineCount: lines.length,
     fontSize,
     shrunk: fontSize < state.fontSize,
+    area,
   };
 }
 

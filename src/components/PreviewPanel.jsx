@@ -9,7 +9,7 @@ import { RATIO_KEYS, getCanvasSize } from '../state/editorState.js';
  * 미리보기와 결과물이 같은 픽셀이 된다.
  */
 const PreviewPanel = forwardRef(function PreviewPanel(
-  { state, onChange, onDownload, canDownload },
+  { state, onChange, onDownload, onShare, canDownload },
   canvasRef
 ) {
   const size = getCanvasSize(state.ratio);
@@ -32,14 +32,19 @@ const PreviewPanel = forwardRef(function PreviewPanel(
           ))}
         </div>
 
-        <button
-          type="button"
-          className="primary"
-          onClick={onDownload}
-          disabled={!canDownload}
-        >
-          이미지 다운로드
-        </button>
+        <div className="button-row">
+          <button type="button" onClick={onShare}>
+            링크 복사
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={onDownload}
+            disabled={!canDownload}
+          >
+            이미지 다운로드
+          </button>
+        </div>
       </div>
 
       <div className="canvas-stage">

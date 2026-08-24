@@ -28,7 +28,9 @@ function Slider({ id, label, value, display, limit, onChange }) {
 export default function EditorPanel({
   state,
   layout,
+  contrast,
   onChange,
+  onApplySuggestedColor,
   onPickImage,
   onClearImage,
 }) {
@@ -166,6 +168,30 @@ export default function EditorPanel({
           value={state.color}
           onChange={(event) => onChange({ color: event.target.value })}
         />
+
+        {contrast && (
+          <div
+            className={contrast.passes ? 'contrast-note ok' : 'contrast-note warn'}
+            role="status"
+          >
+            <span className="contrast-tag">
+              {contrast.passes ? '읽기 좋음' : '읽기 어려움'}
+            </span>
+            <span>
+              배경과의 대비 {contrast.ratio.toFixed(1)}:1
+              {contrast.passes ? '' : ` — 기준 ${contrast.required}:1 에 못 미칩니다`}
+            </span>
+            {!contrast.passes && contrast.suggestion !== state.color && (
+              <button
+                type="button"
+                className="small"
+                onClick={onApplySuggestedColor}
+              >
+                {contrast.suggestion} 으로 바꾸기
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="field">
