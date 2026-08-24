@@ -5,7 +5,9 @@
 
 ## 어디로 가나요
 
-공개 주소: **(배포 후 여기에 주소를 적습니다)**
+공개 주소: **https://myeongjundev.github.io/t03-card-studio/**
+
+저장소: https://github.com/myeongjundev/t03-card-studio
 
 ## 무엇을 하나요
 
