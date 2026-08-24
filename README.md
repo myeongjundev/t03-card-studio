@@ -39,6 +39,7 @@ npm run dev
 - [검증 안내서](docs/VERIFICATION.md) — 30초 확인 절차
 - [구현 설계](docs/ARCHITECTURE.md) — 데이터 흐름과 렌더링 구조
 - [극단 입력 검사표](docs/TEST-EDGE-CASES.md) — 12개 검사 결과와 대표 결함 수정 기록
+- [자체 점검 자료](docs/SELF-CHECK.md) — 배포본에서 측정한 전체 검증 기록
 
 ## 폴더
 
