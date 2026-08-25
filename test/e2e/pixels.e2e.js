@@ -224,3 +224,49 @@ test('같은 설정으로 다시 그리면 필름 입자까지 똑같다', async
   const other = await exportedPng();
   assert.notEqual(other.hash, first.hash, '필름 시대가 아무 차이도 만들지 않았다');
 });
+
+test('2004 는 사진을 피처폰 화질로 바꾼다', async () => {
+  // 사진을 올려야 의미가 있는 검사다. 배경색만으로는 화질 처리가 드러나지 않는다.
+  await page.locator('input[type="file"]').first().setInputFiles('public/sample/landscape-1600x600.png');
+  await page.waitForTimeout(700);
+  await setRatio('1:1');
+  await setPersona('친한 친구');
+
+  /** 캔버스에 실제로 쓰인 색의 가짓수. 화질을 떨어뜨리면 크게 줄어든다. */
+  const colorCount = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      const data = canvas
+        .getContext('2d', { willReadFrequently: true })
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      const seen = new Set();
+      for (let i = 0; i < data.length; i += 4) {
+        seen.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
+      }
+      return seen.size;
+    });
+
+  await setEra('2026');
+  await page.waitForTimeout(150);
+  const clean = await colorCount();
+  const cleanPng = await exportedPng();
+
+  await setEra('2004');
+  await page.waitForTimeout(150);
+  const phone = await colorCount();
+  const phonePng = await exportedPng();
+
+  assert.notEqual(phonePng.hash, cleanPng.hash, '2004 가 사진을 그대로 두었다');
+  assert.ok(
+    phone < clean / 2,
+    `색 가짓수가 충분히 줄지 않았다: 2026 ${clean} → 2004 ${phone}`
+  );
+
+  // 같은 설정으로 다시 그려도 같아야 한다. 노이즈에 고정 씨앗을 쓰기 때문이다.
+  await setEra('2026');
+  await page.waitForTimeout(150);
+  await setEra('2004');
+  await page.waitForTimeout(150);
+  const again = await exportedPng();
+  assert.equal(again.hash, phonePng.hash, '같은 설정인데 다시 그린 결과가 다르다');
+});

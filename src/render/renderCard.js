@@ -35,21 +35,101 @@ function drawBackground(ctx, state, width, height) {
   ctx.fillRect(0, 0, width, height);
 }
 
-function drawImage(ctx, state, width, height, imageBox) {
+/**
+ * 씨앗을 고정한 난수(xorshift).
+ *
+ * Math.random 을 쓰면 같은 설정인데도 매번 다른 그림이 나온다. 그러면
+ * 저장한 템플릿을 다시 불러왔을 때 다른 카드가 되고, "미리보기와 저장본이
+ * 같다" 는 약속도 검사할 수 없다.
+ */
+function seededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return (state >>> 0) / 0xffffffff;
+  };
+}
+
+// 2004년 카메라폰은 30만~130만 화소였다. 실제 값을 그대로 쓰면 1080 캔버스
+// 에서는 그냥 조금 흐린 사진으로 보인다. 그 시절 화면에서 받던 인상이
+// 남도록 과장한다.
+const PHONE_BUFFER_WIDTH = 180;
+// 색 단계. 10단계쯤이면 하늘이나 살색에 띠가 보이면서도 피사체는 남는다.
+const PHONE_COLOR_LEVELS = 10;
+
+/**
+ * 피처폰으로 찍은 사진의 화질을 만든다.
+ *
+ * 무거운 픽셀 연산을 **작게 줄인 버퍼에서만** 한다. 1080×1080 원본에
+ * 직접 하면 100만 번이 넘어 편집할 때마다 버벅이지만, 180px 버퍼는
+ * 2만 번이 안 된다. 어차피 결과는 저화질이라 원본 해상도로 계산할
+ * 이유도 없다.
+ *
+ * @returns {OffscreenCanvas|null} 만들 수 없으면 null. 그때는 원본을 그린다.
+ */
+function featurePhoneFrame(image, imageBox, fit) {
+  if (typeof OffscreenCanvas === 'undefined') return null;
+
+  const bufferWidth = PHONE_BUFFER_WIDTH;
+  const bufferHeight = Math.max(
+    1,
+    Math.round(bufferWidth * (imageBox.height / imageBox.width))
+  );
+  const placed = fitImage(image, bufferWidth, bufferHeight, fit);
+  if (!placed) return null;
+
+  const canvas = new OffscreenCanvas(bufferWidth, bufferHeight);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(image, placed.dx, placed.dy, placed.dw, placed.dh);
+
+  const frame = ctx.getImageData(0, 0, bufferWidth, bufferHeight);
+  const data = frame.data;
+  const random = seededRandom(0x5ca1ab1e);
+  const step = 255 / (PHONE_COLOR_LEVELS - 1);
+
+  for (let i = 0; i < data.length; i += 4) {
+    // 어두운 곳일수록 노이즈가 크다. 저조도에서 지글거리던 그 화면이다.
+    const luma = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
+    const noise = (random() - 0.5) * 26 * (1 - luma * 0.6);
+
+    for (let channel = 0; channel < 3; channel += 1) {
+      // 색 단계를 줄인다. 65,536색 화면에서 보이던 띠.
+      const value = Math.round((data[i + channel] + noise) / step) * step;
+      data[i + channel] = value < 0 ? 0 : value > 255 ? 255 : value;
+    }
+
+    // 화이트밸런스가 늘 초록으로 기울어 있었다.
+    data[i + 1] = Math.min(255, data[i + 1] * 1.07);
+    data[i + 2] = Math.min(255, data[i + 2] * 0.95);
+  }
+
+  ctx.putImageData(frame, 0, 0);
+  return canvas;
+}
+
+function drawImage(ctx, state, width, height, imageBox, era) {
   if (!state.image) return;
-  const box = fitImage(state.image, imageBox.width, imageBox.height, state.fit);
-  if (!box) return;
+
   ctx.save();
   ctx.beginPath();
   ctx.rect(imageBox.x, imageBox.y, imageBox.width, imageBox.height);
   ctx.clip();
-  ctx.drawImage(
-    state.image,
-    imageBox.x + box.dx,
-    imageBox.y + box.dy,
-    box.dw,
-    box.dh
-  );
+
+  const phone = era === '2004' ? featurePhoneFrame(state.image, imageBox, state.fit) : null;
+  if (phone) {
+    // 보간을 꺼야 화소가 네모로 보인다. 켜 두면 부드럽게 뭉개져서
+    // "저화질" 이 아니라 그냥 "흐린 사진" 이 된다.
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(phone, imageBox.x, imageBox.y, imageBox.width, imageBox.height);
+  } else {
+    const box = fitImage(state.image, imageBox.width, imageBox.height, state.fit);
+    if (box) {
+      ctx.drawImage(state.image, imageBox.x + box.dx, imageBox.y + box.dy, box.dw, box.dh);
+    }
+  }
+
   ctx.restore();
 }
 
@@ -138,9 +218,7 @@ function drawMinihompy(ctx, width, height, imageBox, layer) {
  * 픽셀마다 난수를 뿌리면 1080×1920 에서 200만 번 연산이라 편집할 때마다
  * 버벅인다. 작은 타일을 한 번만 만들어 패턴으로 반복한다.
  *
- * 난수는 **씨앗을 고정한 것**을 쓴다. Math.random 을 쓰면 같은 설정인데도
- * 매번 다른 그림이 나와서, 미리보기와 저장본이 같다는 약속을 검사할 수
- * 없게 된다.
+ * 난수는 seededRandom 을 쓴다. 이유는 그 함수 설명에 적었다.
  */
 let grainTile = null;
 
@@ -158,14 +236,7 @@ function makeGrainTile() {
   const ctx = canvas.getContext('2d');
   const image = ctx.createImageData(size, size);
 
-  // 아주 단순한 고정 씨앗 난수(xorshift). 결과가 항상 같아야 한다.
-  let seed = 0x9e3779b9;
-  const next = () => {
-    seed ^= seed << 13;
-    seed ^= seed >>> 17;
-    seed ^= seed << 5;
-    return (seed >>> 0) / 0xffffffff;
-  };
+  const next = seededRandom(0x9e3779b9);
 
   for (let i = 0; i < image.data.length; i += 4) {
     const value = 128 + (next() - 0.5) * 255;
@@ -408,7 +479,7 @@ export function renderCard(ctx, state, width, height) {
   drawBackground(ctx, state, width, height);
   // 프레임 배경(미니홈피 카드, 필름 베이스)은 사진보다 먼저 깔아야 한다.
   drawComposition(ctx, state, width, height, composition, 'under');
-  drawImage(ctx, state, width, height, composition.imageBox);
+  drawImage(ctx, state, width, height, composition.imageBox, composition.era);
   // 비네팅·날짜 각인·카운터처럼 사진 위에 얹히는 것은 나중에 그린다.
   drawComposition(ctx, state, width, height, composition, 'over');
 
