@@ -64,3 +64,34 @@ export function redo(history, currentState) {
 
 export const canUndo = (history) => history.past.length > 0;
 export const canRedo = (history) => history.future.length > 0;
+
+/**
+ * 묶음 상태. App 이 ref 로 들고 다닌다.
+ *
+ * lastChangeAt 은 지금 묶음이 마지막으로 갱신된 시각,
+ * isolated 는 "이번 변경은 Persona/Era 처럼 그 자체로 하나의 행동" 이라는 표시다.
+ */
+export function createBurst() {
+  return { lastChangeAt: 0, isolated: false };
+}
+
+/** Persona/Era 처럼 그 자체로 한 단계인 변경을 예고한다. */
+export function isolateBurst(burst) {
+  return { ...burst, isolated: true };
+}
+
+/**
+ * recordChange 를 묶음 상태와 함께 한 칸 진행시킨다.
+ *
+ * 독립 행동은 앞의 편집과도, 뒤따르는 편집과도 묶이지 않는다. 앞만 끊으면
+ * Persona 를 고른 뒤 0.6초 안에 문구를 옮겼을 때 그 이동이 Persona 단계에
+ * 흡수되어, 되돌리기 한 번에 둘이 함께 사라진다.
+ */
+export function advanceBurst(history, previousState, now, burst) {
+  const anchor = burst.isolated ? 0 : burst.lastChangeAt;
+  const result = recordChange(history, previousState, now, anchor);
+  return {
+    ...result,
+    burst: { lastChangeAt: burst.isolated ? 0 : now, isolated: false },
+  };
+}

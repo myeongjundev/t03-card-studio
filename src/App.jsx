@@ -10,7 +10,9 @@ import { buildFileName, downloadCanvas, copyCanvasImage } from './io/exportImage
 import { PRESETS, ERAS, applyPreset, applyEra } from './state/presets.js';
 import {
   createHistory,
-  recordChange,
+  createBurst,
+  isolateBurst,
+  advanceBurst,
   undo as undoHistory,
   redo as redoHistory,
   canUndo as historyCanUndo,
@@ -46,10 +48,10 @@ export default function App() {
   // history 자체는 리렌더가 필요 없는 순수 데이터라 ref 에 둔다. 버튼을
   // 켜고 끄려면 리렌더가 한 번은 필요하므로 historyTick 을 올려 그때만
   // 다시 그리게 한다. lastStateRef 는 "지금 묶음이 시작되기 직전 상태",
-  // lastChangeAtRef 는 그 묶음이 마지막으로 갱신된 시각이다.
+  // burstRef 는 그 묶음의 시각과 독립 여부다.
   const historyRef = useRef(createHistory());
   const lastStateRef = useRef(state);
-  const lastChangeAtRef = useRef(0);
+  const burstRef = useRef(createBurst());
   // 되돌리기/다시하기 자신이 만든 state 변경은 다시 history 에 기록하면 안
   // 된다. 그 순간에만 이 플래그를 세워 다음 effect 실행 한 번을 건너뛴다.
   const suppressRecordRef = useRef(false);
@@ -124,14 +126,14 @@ export default function App() {
     if (lastStateRef.current === state) return; // 첫 렌더 등 실제 변경이 아님
 
     const now = Date.now();
-    const { history, changed } = recordChange(
+    const { history, changed, burst } = advanceBurst(
       historyRef.current,
       lastStateRef.current,
       now,
-      lastChangeAtRef.current
+      burstRef.current
     );
     historyRef.current = history;
-    lastChangeAtRef.current = now;
+    burstRef.current = burst;
     lastStateRef.current = state;
     if (changed) setHistoryTick((tick) => tick + 1);
   }, [state]);
@@ -174,7 +176,7 @@ export default function App() {
   /**
    * 되돌리기/다시하기 순간에는 새 state 를 그대로 대입한다. history 에서
    * 꺼낸 값은 예전에 이미 clampState 를 거친 상태이므로 다시 검증할 필요가
-   * 없다. suppressRecordRef 와 lastChangeAtRef 리셋은 이 변경이 history 에
+   * 없다. suppressRecordRef 와 burstRef 리셋은 이 변경이 history 에
    * 다시 기록되지 않게 하고, 되돌린 직후 바로 편집을 시작하면 그 편집이
    * 새 묶음으로 취급되게 한다.
    */
@@ -183,7 +185,7 @@ export default function App() {
     if (!result) return;
     historyRef.current = result.history;
     suppressRecordRef.current = true;
-    lastChangeAtRef.current = 0;
+    burstRef.current = createBurst();
     setState(result.state);
     setHistoryTick((tick) => tick + 1);
   }, [state]);
@@ -193,7 +195,7 @@ export default function App() {
     if (!result) return;
     historyRef.current = result.history;
     suppressRecordRef.current = true;
-    lastChangeAtRef.current = 0;
+    burstRef.current = createBurst();
     setState(result.state);
     setHistoryTick((tick) => tick + 1);
   }, [state]);
@@ -455,7 +457,7 @@ export default function App() {
 
   /** Persona는 보이는 방식만 바꾸며, 한 번의 독립된 되돌리기 단계가 된다. */
   const usePreset = useCallback((presetId) => {
-    lastChangeAtRef.current = 0;
+    burstRef.current = isolateBurst(burstRef.current);
     setState((prev) => clampState(applyPreset(prev, presetId)));
     const preset = PRESETS.find((item) => item.id === presetId);
     setNotice({
@@ -466,7 +468,7 @@ export default function App() {
 
   /** Era 변경도 Persona와 마찬가지로 하나의 독립된 편집 행동이다. */
   const useEra = useCallback((eraId) => {
-    lastChangeAtRef.current = 0;
+    burstRef.current = isolateBurst(burstRef.current);
     setState((prev) => clampState(applyEra(prev, eraId)));
     const era = ERAS.find((item) => item.id === eraId);
     setNotice({

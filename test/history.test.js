@@ -9,6 +9,9 @@ import {
   canRedo,
   HISTORY_LIMIT,
   BURST_WINDOW_MS,
+  createBurst,
+  isolateBurst,
+  advanceBurst,
 } from '../src/state/history.js';
 
 test('처음에는 되돌리기도 다시하기도 할 수 없다', () => {
@@ -89,4 +92,34 @@ test('되돌리기를 반복해도 과거 목록 밖으로 나가지 않는다',
 test('다시하기를 반복해도 미래 목록 밖으로 나가지 않는다', () => {
   const history = { past: [], future: [] };
   assert.equal(redo(history, 'A'), null);
+});
+
+test('Persona 다음에 곧바로 편집해도 두 단계로 남는다', () => {
+  // 재현: 모습을 고른 직후(0.6초 안에) 문구를 끌면, 되돌리기 한 번에
+  // 문구 이동과 모습 변경이 함께 사라지던 문제.
+  let history = createHistory();
+  let burst = createBurst();
+
+  // 1) 문구를 타이핑하던 중 (t=1000)
+  ({ history, burst } = advanceBurst(history, 'typing', 1000, burst));
+
+  // 2) Persona 클릭 (t=1100). 0.6초 안이지만 독립 단계여야 한다.
+  burst = isolateBurst(burst);
+  let changed;
+  ({ history, burst, changed } = advanceBurst(history, 'before-persona', 1100, burst));
+  assert.equal(changed, true, 'Persona 가 앞의 타이핑에 묶였다');
+
+  // 3) 곧바로 문구 이동 (t=1200). 역시 Persona 에 묶이면 안 된다.
+  ({ history, burst, changed } = advanceBurst(history, 'after-persona', 1200, burst));
+  assert.equal(changed, true, 'Persona 직후 편집이 Persona 단계에 흡수됐다');
+
+  assert.deepEqual(history.past, ['typing', 'before-persona', 'after-persona']);
+});
+
+test('독립 행동이 아니면 묶음은 평소대로 동작한다', () => {
+  let history = createHistory();
+  let burst = createBurst();
+  ({ history, burst } = advanceBurst(history, 'a', 1000, burst));
+  const { changed } = advanceBurst(history, 'b', 1100, burst);
+  assert.equal(changed, false, '0.6초 안의 연속 편집이 새 단계를 만들었다');
 });
