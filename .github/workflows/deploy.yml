@@ -27,6 +27,11 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # 테스트를 build 앞에 둔다. 실패하면 job 이 여기서 멈추고
+      # upload-pages-artifact 까지 가지 않으므로, 깨진 코드가 배포되지 않는다.
+      - run: npm test
+
       - run: npm run build
 
       - uses: actions/configure-pages@v5
