@@ -25,7 +25,16 @@ const PAINTING_CALLS = new Set([
 ]);
 
 /** 칠할 때 결과를 좌우하는 상태. 호출과 함께 기록해야 색 변경도 잡힌다. */
-const PAINT_STATE = ['fillStyle', 'strokeStyle', 'lineWidth', 'globalAlpha', 'font', 'textAlign'];
+const PAINT_STATE = [
+  'fillStyle',
+  'strokeStyle',
+  'lineWidth',
+  'globalAlpha',
+  // 합성 모드가 바뀌면 같은 fillRect 라도 결과가 완전히 달라진다.
+  'globalCompositeOperation',
+  'font',
+  'textAlign',
+];
 
 const describe = (value) => {
   if (typeof value === 'number') return Number.isFinite(value) ? value.toFixed(2) : String(value);
@@ -50,6 +59,7 @@ export function tracingContext({ withState = false } = {}) {
     lineWidth: 1,
     globalAlpha: 1,
     textAlign: 'start',
+    globalCompositeOperation: 'source-over',
     measureText(value) {
       return { width: toGraphemes(value).length * fontSize * 0.6 };
     },

@@ -133,56 +133,117 @@ function drawMinihompy(ctx, width, height, imageBox, layer) {
 }
 
 /**
- * 필름 시대. 검은 필름 베이스에 좌우 스프로킷 홀을 뚫고,
- * 사진 위에 비네팅을 얹은 뒤 주황색 날짜를 각인한다.
+ * 필름 입자 타일.
+ *
+ * 픽셀마다 난수를 뿌리면 1080×1920 에서 200만 번 연산이라 편집할 때마다
+ * 버벅인다. 작은 타일을 한 번만 만들어 패턴으로 반복한다.
+ *
+ * 난수는 **씨앗을 고정한 것**을 쓴다. Math.random 을 쓰면 같은 설정인데도
+ * 매번 다른 그림이 나와서, 미리보기와 저장본이 같다는 약속을 검사할 수
+ * 없게 된다.
  */
-function drawFilm(ctx, width, height, imageBox, layer) {
-  if (layer === 'over') {
-    // 비네팅과 날짜 각인은 사진 위에 얹혀야 한다.
-    const cx = imageBox.x + imageBox.width / 2;
-    const cy = imageBox.y + imageBox.height / 2;
-    const r = Math.max(imageBox.width, imageBox.height) * 0.75;
-    const vignette = ctx.createRadialGradient(cx, cy, r * 0.35, cx, cy, r);
-    vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(20,12,4,0.55)');
-    ctx.fillStyle = vignette;
-    ctx.fillRect(imageBox.x, imageBox.y, imageBox.width, imageBox.height);
+let grainTile = null;
 
-    ctx.save();
-    ctx.shadowColor = 'rgba(255,140,40,0.9)';
-    ctx.shadowBlur = width * 0.014;
-    metaText(
-      ctx, "'04 8 24",
-      imageBox.x + imageBox.width - width * 0.03,
-      imageBox.y + imageBox.height - height * 0.048,
-      width * 0.031, '#ff9436', 'right'
-    );
-    ctx.restore();
-    return;
+function makeGrainTile() {
+  if (grainTile !== null) return grainTile;
+
+  // OffscreenCanvas 가 없는 환경(테스트 등)에서는 입자를 건너뛴다.
+  if (typeof OffscreenCanvas === 'undefined') {
+    grainTile = false;
+    return grainTile;
   }
 
-  // 필름 베이스
-  ctx.fillStyle = '#17140f';
+  const size = 128;
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext('2d');
+  const image = ctx.createImageData(size, size);
+
+  // 아주 단순한 고정 씨앗 난수(xorshift). 결과가 항상 같아야 한다.
+  let seed = 0x9e3779b9;
+  const next = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    return (seed >>> 0) / 0xffffffff;
+  };
+
+  for (let i = 0; i < image.data.length; i += 4) {
+    const value = 128 + (next() - 0.5) * 255;
+    image.data[i] = value;
+    image.data[i + 1] = value;
+    image.data[i + 2] = value;
+    image.data[i + 3] = 255;
+  }
+  ctx.putImageData(image, 0, 0);
+  grainTile = canvas;
+  return grainTile;
+}
+
+/**
+ * 필름 시대 — 인화된 필름 사진의 **화질**을 흉내 낸다.
+ *
+ * 처음에는 필름 스트립(스프로킷 홀, COLOR 400 표기, 검은 베이스)을 그렸는데
+ * 그건 필름 '통' 의 모습이지 필름으로 찍은 '사진' 의 모습이 아니다. 원한
+ * 것은 후자였다. 그래서 프레임 장식을 걷어내고 사진 자체를 손본다.
+ *
+ * 실제 필름 인화물에서 오는 네 가지를 겹친다.
+ *
+ * 1. 색바램 — 검정이 완전히 검지 않고 살짝 들뜬다
+ * 2. 따뜻한 색조 — 세월이 지난 인화지의 누런 기
+ * 3. 비네팅 — 렌즈 가장자리가 어두워진다
+ * 4. 입자 — 필름 그레인
+ *
+ * 전부 사진 위에 얹히므로 'over' 에서만 그린다. 깔개가 없다.
+ */
+function drawFilm(ctx, width, height, imageBox, layer, era) {
+  if (layer !== 'over') return;
+
+  // 1. 색바램. 검정을 살짝 들어 올린다.
+  ctx.fillStyle = 'rgba(232, 214, 186, 0.10)';
   ctx.fillRect(0, 0, width, height);
 
-  // 좌우 스프로킷 홀
-  const holeW = width * 0.045;
-  const holeH = height * 0.022;
-  const gap = height * 0.038;
-  ctx.fillStyle = '#e8e2d4';
-  for (let y = height * 0.03; y < height - holeH; y += gap) {
-    roundedRect(ctx, width * 0.025, y, holeW, holeH, holeH * 0.3);
-    ctx.fill();
-    roundedRect(ctx, width - width * 0.025 - holeW, y, holeW, holeH, holeH * 0.3);
-    ctx.fill();
-  }
+  // 2. 따뜻한 색조. soft-light 라 밝기는 유지한 채 색만 물든다.
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.fillStyle = 'rgba(255, 148, 54, 0.34)';
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
 
-  // 필름 표기
-  metaText(ctx, 'COLOR 400', imageBox.x, imageBox.y - height * 0.045, width * 0.026, '#d8cdb4');
+  // 3. 비네팅.
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = Math.max(width, height) * 0.72;
+  const vignette = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, radius);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(28,16,6,0.5)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, width, height);
+
+  // 4. 입자.
+  ctx.save();
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.globalAlpha = 0.13;
+  const tile = makeGrainTile();
+  const pattern = tile ? ctx.createPattern(tile, 'repeat') : null;
+  // 패턴을 못 만드는 환경에서도 같은 자리에 같은 크기로 한 번 칠한다.
+  // 그래야 렌더 기록 비교(회귀 스냅샷)가 환경에 상관없이 맞는다.
+  ctx.fillStyle = pattern ?? 'rgba(128,128,128,1)';
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  // 날짜 각인. 필름 사진의 가장 알아보기 쉬운 표시라 이것만 남긴다.
+  // 연도는 시대에서 가져온다. 예전에는 "'04" 가 박혀 있어서 2012 시대
+  // 카드에 2004 년이 찍혔다.
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,140,40,0.9)';
+  ctx.shadowBlur = width * 0.014;
   metaText(
-    ctx, '12A  →', imageBox.x + imageBox.width, imageBox.y - height * 0.045,
-    width * 0.026, '#c8562f', 'right'
+    ctx, `'${String(era).slice(2)} 8 24`,
+    width - width * 0.06,
+    height - height * 0.055,
+    width * 0.031, '#ff9436', 'right'
   );
+  ctx.restore();
 }
 
 /** 숏폼 시대. 하단 그라데이션으로 자막이 읽히게 만든다. */
@@ -213,7 +274,7 @@ function drawComposition(ctx, state, width, height, composition, layer) {
   if (composition.era === '2004') {
     drawMinihompy(ctx, width, height, composition.imageBox, layer);
   } else if (composition.era === '2012') {
-    drawFilm(ctx, width, height, composition.imageBox, layer);
+    drawFilm(ctx, width, height, composition.imageBox, layer, composition.era);
   } else {
     drawShortForm(ctx, width, height, state.persona, layer);
   }

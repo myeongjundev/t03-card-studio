@@ -198,3 +198,29 @@ test('투명 배경을 켜면 알파가 실제로 보존된다', async () => {
 test('페이지에서 오류가 나지 않았다', async () => {
   assert.deepEqual(page.errors, [], `콘솔/페이지 오류: ${page.errors.join(' | ')}`);
 });
+
+test('같은 설정으로 다시 그리면 필름 입자까지 똑같다', async () => {
+  // 필름 입자는 난수로 만든다. Math.random 을 쓰면 같은 설정인데도 매번
+  // 다른 그림이 나와서, 저장한 템플릿을 다시 불러왔을 때 다른 카드가 된다.
+  // 씨앗을 고정했다는 것을 실제 픽셀로 확인한다.
+  await setRatio('1:1');
+  await setPersona('소셜');
+  await setEra('2012');
+  await page.waitForTimeout(150);
+  const first = await exportedPng();
+
+  // 다른 시대로 갔다가 돌아온다. 캔버스를 완전히 다시 그리게 만드는 것이다.
+  await setEra('2026');
+  await page.waitForTimeout(150);
+  await setEra('2012');
+  await page.waitForTimeout(150);
+  const second = await exportedPng();
+
+  assert.equal(second.hash, first.hash, '같은 설정인데 다시 그린 결과가 다르다');
+
+  // 비교가 의미 있으려면 필름 시대가 실제로 무언가를 그려야 한다.
+  await setEra('2026');
+  await page.waitForTimeout(150);
+  const other = await exportedPng();
+  assert.notEqual(other.hash, first.hash, '필름 시대가 아무 차이도 만들지 않았다');
+});
