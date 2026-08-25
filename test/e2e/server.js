@@ -27,7 +27,15 @@ export async function startDistServer() {
   const server = http.createServer((req, res) => {
     // base 가 './' 라 요청은 루트 기준으로 들어온다.
     const url = new URL(req.url, 'http://localhost');
-    const rel = url.pathname.replace(/^\/+/, '');
+    // Vite가 만든 asset 이름에는 한글 등 URL 인코딩 문자가 들어갈 수 있다.
+    // 실제 정적 호스트처럼 디코딩한 파일 경로를 사용한다.
+    let rel;
+    try {
+      rel = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+    } catch {
+      res.writeHead(400).end('bad request');
+      return;
+    }
     const file = path.join(DIST, rel === '' ? 'index.html' : rel);
 
     // dist 밖으로 나가는 경로는 거부한다.

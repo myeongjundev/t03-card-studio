@@ -392,7 +392,36 @@ test('좁은 화면에서 가로 스크롤이 생기지 않는다', async () => 
     assert.deepEqual(result.overflowing, [], '화면 밖으로 나간 요소가 있다');
     assert.equal(result.scrolls, false, '가로 스크롤이 생겼다');
     assert.ok(result.previewTop < result.editorTop, '모바일에서 미리보기가 편집기보다 뒤에 있다');
-    assert.ok(result.canvasBottom <= 812, `첫 화면에서 미리보기가 보이지 않는다: ${result.canvasBottom}px`);
+    // 첫 화면의 Scanner는 키보드로도 시간을 움직이고, 고른 시대를 작업실에 전달한다.
+    const scanner = narrow.getByRole('slider', { name: '시대 탐색' });
+    assert.equal(await scanner.count(), 1, 'Temporal Scanner가 없다');
+    await scanner.scrollIntoViewIfNeeded();
+    const scannerBox = await scanner.boundingBox();
+    assert.ok(scannerBox, 'Scanner 위치를 읽지 못했다');
+    await narrow.mouse.move(scannerBox.x + scannerBox.width - 3, scannerBox.y + scannerBox.height / 2);
+    await narrow.mouse.down();
+    await narrow.mouse.move(scannerBox.x + scannerBox.width * 0.75, scannerBox.y + scannerBox.height / 2, { steps: 6 });
+    const splitClip = await narrow.locator('.scanner-era.is-reveal').evaluate(
+      (layer) => getComputedStyle(layer).clipPath
+    );
+    assert.match(splitClip, /[1-9][0-9](?:\.\d+)?%/, `드래그 중 두 시대가 실제 경계로 나뉘지 않았다: ${splitClip}`);
+    await narrow.mouse.up();
+    await narrow.waitForTimeout(450);
+    assert.equal(await scanner.getAttribute('aria-valuenow'), '2012', '드래그 후 가장 가까운 시대에 스냅되지 않았다');
+    await scanner.press('Home');
+    assert.equal(await scanner.getAttribute('aria-valuenow'), '2004', '키보드로 2004에 이동하지 못했다');
+    await narrow.getByRole('button', { name: /2004로 짤 만들기/ }).click();
+    await narrow.waitForTimeout(500);
+    const visibleCanvas = await narrow.locator('canvas').evaluate((canvas) => {
+      const rect = canvas.getBoundingClientRect();
+      return rect.top >= 0 && rect.top < innerHeight && rect.bottom > 0;
+    });
+    assert.equal(visibleCanvas, true, 'CTA로 이동한 뒤 미리보기가 보이지 않는다');
+    assert.match(
+      await narrow.locator('.era-timeline button[aria-pressed="true"]').innerText(),
+      /2004/,
+      'Hero에서 고른 시대가 Studio에 반영되지 않았다'
+    );
     assert.match(result.canvasLabel, /1:1.*기본 모습.*2026 시대.*배경 이미지 없음.*오늘도 무사히/, 'Canvas 설명에 결과 정보가 빠졌다');
     assert.equal(result.canvasDescribedBy, 'preview-description ready-check-list');
     assert.equal(await narrow.getByText('30초 빠른 시작').count(), 1, '빠른 시작 안내가 없다');
@@ -410,6 +439,15 @@ test('좁은 화면에서 가로 스크롤이 생기지 않는다', async () => 
     assert.equal(dock.position, 'fixed', '편집 중 미리보기가 화면에 고정되지 않았다');
     assert.equal(dock.visible, true, '고정 미리보기가 화면 밖으로 나갔다');
     await narrow.getByRole('button', { name: '큰 미리보기로 돌아가기' }).click();
+
+    await narrow.getByRole('button', { name: '작품으로 보기 ↗' }).click();
+    const showcase = await narrow.locator('.panel-preview').evaluate((panel) => ({
+      fixed: getComputedStyle(panel).position === 'fixed',
+      fillsViewport: panel.getBoundingClientRect().width === innerWidth,
+    }));
+    assert.equal(showcase.fixed, true, '작품 감상 모드가 화면 위에 열리지 않았다');
+    assert.equal(showcase.fillsViewport, true, '작품 감상 모드가 화면을 채우지 않는다');
+    await narrow.getByRole('button', { name: '편집으로 돌아가기' }).click();
   } finally {
     await narrow.close();
   }

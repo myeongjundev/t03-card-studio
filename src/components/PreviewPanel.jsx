@@ -41,6 +41,7 @@ const PreviewPanel = forwardRef(function PreviewPanel(
   const [dragging, setDragging] = useState(false);
   const [showSafeArea, setShowSafeArea] = useState(false);
   const [mobileDocked, setMobileDocked] = useState(false);
+  const [showcaseMode, setShowcaseMode] = useState(false);
   const readyChecks = buildReadyChecks({
     state,
     layout,
@@ -146,10 +147,17 @@ const PreviewPanel = forwardRef(function PreviewPanel(
 
   return (
     <section
-      className={`panel panel-preview${mobileDocked ? ' is-mobile-docked' : ''}`}
+      className={`panel panel-preview${mobileDocked ? ' is-mobile-docked' : ''}${showcaseMode ? ' is-showcase' : ''}`}
       aria-labelledby="preview-heading"
     >
       <h2 id="preview-heading"><span>02</span> 결과 확인</h2>
+
+      {showcaseMode && (
+        <div className="showcase-caption" aria-live="polite">
+          <p>ALTER EGO · {state.era}</p>
+          <strong>지금의 나를<br />한 시대의 장면으로.</strong>
+        </div>
+      )}
 
       <div className="history-controls">
         <button
@@ -177,6 +185,14 @@ const PreviewPanel = forwardRef(function PreviewPanel(
           onClick={() => setMobileDocked((docked) => !docked)}
         >
           {mobileDocked ? '큰 미리보기' : '편집하며 보기'}
+        </button>
+        <button
+          type="button"
+          className="small showcase-toggle"
+          aria-pressed={showcaseMode}
+          onClick={() => setShowcaseMode((visible) => !visible)}
+        >
+          {showcaseMode ? '편집으로 돌아가기' : '작품으로 보기 ↗'}
         </button>
       </div>
 

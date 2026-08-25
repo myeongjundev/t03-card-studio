@@ -7,7 +7,7 @@ import {
 import { renderCard } from './render/renderCard.js';
 import { checkTextContrast } from './render/contrast.js';
 import { buildFileName, downloadCanvas, copyCanvasImage } from './io/exportImage.js';
-import { PRESETS, ERAS, applyPreset, applyEra } from './state/presets.js';
+import { PRESETS, ERAS, applyPreset, applyEra, applyIdentity } from './state/presets.js';
 import {
   createHistory,
   createBurst,
@@ -25,6 +25,8 @@ import { templateFromState, stateFromTemplate } from './templates/schema.js';
 import EditorPanel from './components/EditorPanel.jsx';
 import PreviewPanel from './components/PreviewPanel.jsx';
 import TemplatePanel from './components/TemplatePanel.jsx';
+import TemporalScanner from './components/TemporalScanner.jsx';
+import identityBanner from '../배너이미지/짤스튜디오배너.png';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
 
@@ -441,7 +443,7 @@ export default function App() {
     setNotice({
       type: copied ? 'success' : 'error',
       text: copied
-        ? '카드 링크를 복사했습니다. 링크를 연 사람은 이 카드를 그대로 보고 수정할 수 있습니다. (배경 이미지는 담기지 않습니다)'
+        ? 'TIMELINE COPIED — 카드 링크를 복사했습니다. 링크를 연 사람은 그대로 보고 수정할 수 있습니다. (배경 이미지는 담기지 않습니다)'
         : '클립보드에 넣지 못했습니다. 주소창의 주소를 직접 복사해 주세요.',
     });
   }, [state]);
@@ -462,7 +464,7 @@ export default function App() {
     const preset = PRESETS.find((item) => item.id === presetId);
     setNotice({
       type: 'success',
-      text: `'${preset?.name}' 모습을 적용했습니다. 문구와 이미지는 그대로 두었습니다.`,
+      text: `IDENTITY SHIFTED — '${preset?.name}' 모습을 적용했습니다. 문구와 이미지는 그대로입니다.`,
     });
   }, []);
 
@@ -473,8 +475,38 @@ export default function App() {
     const era = ERAS.find((item) => item.id === eraId);
     setNotice({
       type: 'success',
-      text: `${era?.label} 시대를 적용했습니다. 이미지와 문구는 그대로 두었습니다.`,
+      text: `TIME LOCKED / ${era?.label} — 이미지와 문구는 그대로 유지했습니다.`,
     });
+  }, []);
+
+  /** Hero의 탐색 상태는 편집기와 분리하고, 입장할 때 한 번만 실제 상태에 적용한다. */
+  const enterHeroEra = useCallback((eraId) => {
+    const choices = {
+      '2004': { persona: 'close-friends', ratio: '1:1' },
+      '2012': { persona: 'social', ratio: '4:5' },
+      '2026': { persona: 'social', ratio: '9:16' },
+    };
+    const choice = choices[eraId] ?? choices['2026'];
+    burstRef.current = isolateBurst(burstRef.current);
+    setState((prev) => clampState({
+      ...applyIdentity(prev, choice.persona, eraId),
+      ratio: choice.ratio,
+    }));
+    setNotice({
+      type: 'success',
+      text: `ENTERING ERA / ${eraId} — 선택한 시간선을 Studio에 연결했습니다. 사진과 문구는 그대로 유지했습니다.`,
+    });
+    requestAnimationFrame(() => {
+      const target = window.matchMedia('(max-width: 1100px)').matches
+        ? document.querySelector('.panel-preview')
+        : document.getElementById('studio');
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
+  /** URL의 #card 공유 상태를 보존하면서 제작 도구로만 이동한다. */
+  const scrollToStudio = useCallback(() => {
+    document.getElementById('studio')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   /** 이미지를 클립보드에 넣는다. 대화창에 바로 붙여넣기 위한 것이다. */
@@ -484,7 +516,7 @@ export default function App() {
     const result = await copyCanvasImage(canvas);
     setNotice(
       result.ok
-        ? { type: 'success', text: '이미지를 복사했습니다. 대화창에 붙여넣기 하세요.' }
+        ? { type: 'success', text: 'IDENTITY COPIED — 이미지를 복사했습니다. 대화창에 붙여넣기 하세요.' }
         : { type: 'error', text: result.message }
     );
   }, []);
@@ -502,7 +534,7 @@ export default function App() {
       const size = await downloadCanvas(canvas, buildFileName(state.ratio));
       setNotice({
         type: 'success',
-        text: `이미지를 내려받았습니다. (${Math.round(size / 1024)}KB)`,
+        text: `IDENTITY CAPTURED — PNG를 내려받았습니다. (${Math.round(size / 1024)}KB)`,
       });
     } catch {
       setNotice({
@@ -513,14 +545,34 @@ export default function App() {
   }, [state.ratio]);
 
   return (
-    <div className="app">
+    <div className={`app era-${state.era}`}>
       <header className="masthead">
-        <div>
-          <p className="brand-kicker">하나의 순간, 여러 개의 나</p>
-          <h1>또 다른 나</h1>
-          <p>사진과 문장을 시대의 감성으로 기록해 보세요.</p>
+        <nav className="top-nav" aria-label="주요 메뉴">
+          <a className="wordmark" href="#top" aria-label="Alter Ego 처음으로">A/E</a>
+          <span>TIME-TRAVEL ID STUDIO</span>
+          <button type="button" className="nav-studio-button" onClick={scrollToStudio}>
+            바로 만들기 ↘
+          </button>
+        </nav>
+
+        <div className="hero" id="top">
+          <div className="hero-copy">
+            <p className="brand-kicker">ONE PHOTO · THREE ERAS · THREE IDENTITIES</p>
+            <h1>같은 사진.<br />다른 시대.<br /><em>다른 나.</em></h1>
+            <p className="hero-lead">
+              한 장의 사진을 2004, 2012, 2026의 방식으로 다시 기록합니다.
+              선을 움직여 시간 속의 다른 나를 먼저 만나보세요.
+            </p>
+            <div className="hero-actions">
+              <button type="button" className="hero-make-button" onClick={scrollToStudio}>
+                <span>바로 짤 만들기</span><b aria-hidden="true">↓</b>
+              </button>
+              <span>또는 오른쪽에서 시대를 먼저 탐색하세요.</span>
+            </div>
+          </div>
+
+          <TemporalScanner onEnterEra={enterHeroEra} />
         </div>
-        <span className="local-badge">● 내 브라우저에서만</span>
       </header>
 
       <p className="privacy-note">
@@ -528,6 +580,44 @@ export default function App() {
         {' '}업로드한 이미지는 외부로 전송되지 않고, 템플릿도 이 기기에만 저장됩니다.
         공개할 카드에는 개인정보를 넣지 마세요.
       </p>
+
+      <section className="project-story" aria-labelledby="story-heading">
+        <div className="story-index" aria-hidden="true">02 / WHY<br />THESE<br />ERAS</div>
+        <div className="story-main">
+          <p className="story-kicker">DIGITAL IDENTITY THROUGH TIME</p>
+          <h2 id="story-heading">
+            우리는 같은 사람이어도,<br />시대에 따라 다른 모습으로 기억됩니다.
+          </h2>
+          <p className="story-lead">
+            <strong>ALTER EGO</strong>는 한 장의 사진과 한 줄의 문장이 인터넷 문화의
+            변화에 따라 어떻게 다른 정체성이 되는지 탐구하는 인터랙티브 카드 스튜디오입니다.
+            과거를 흉내 내는 필터가 아니라, 각 시대가 자신을 표현하던 방식 자체를
+            오늘의 화면 위에 다시 설계했습니다.
+          </p>
+        </div>
+        <div className="story-note">
+          <span>01 — MEMORY</span>
+          <p>개인 공간을 꾸미고 감정을 기록하던 2004년.</p>
+          <span>02 — FEED</span>
+          <p>사진 한 장으로 일상을 공유하기 시작한 2012년.</p>
+          <span>03 — SIGNAL</span>
+          <p>짧고 선명한 장면으로 나를 증명하는 2026년.</p>
+        </div>
+      </section>
+
+      <section className="identity-archive" aria-labelledby="identity-heading">
+        <div className="archive-heading">
+          <p>03 / THREE IDENTITIES</p>
+          <h2 id="identity-heading">한 순간이 지나온<br />세 개의 디지털 자아.</h2>
+        </div>
+        <figure className="archive-banner">
+          <img
+            src={identityBanner}
+            alt="같은 인물을 개인 웹 2004, 소셜 피드 2012, 숏폼 2026의 모습으로 나란히 표현한 ALTER EGO 타임라인"
+          />
+          <figcaption>ONE PHOTO · THREE ERAS · THREE IDENTITIES</figcaption>
+        </figure>
+      </section>
 
       <div aria-live="polite">
         {notice && (
@@ -538,6 +628,12 @@ export default function App() {
             {notice.text}
           </div>
         )}
+      </div>
+
+      <div className="studio-intro" id="studio">
+        <p>04 / THE STUDIO</p>
+        <h2>시간선을 선택하고,<br />지금의 나를 다시 디자인하세요.</h2>
+        <span>사진은 서버로 전송되지 않습니다.</span>
       </div>
 
       <div className="layout">

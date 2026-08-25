@@ -668,3 +668,14 @@ renderCard: under → image → over → persona → text
 
 첫 편집 화면에는 `모습 → 시대 → 내 사진`의 30초 빠른 시작 순서를 표시한다.
 세부 슬라이더는 그대로 유지하되 첫 방문자가 무엇부터 해야 하는지 먼저 말한다.
+# 18. Temporal Scanner
+
+Hero의 시간 탐색 상태(`progress`)와 실제 편집 상태는 분리한다. Pointer/Touch/Keyboard로
+Scanner를 움직이는 동안에는 Hero의 CSS 프레임만 변하며 Undo, localStorage, 공유 링크에
+영향을 주지 않는다. 사용자가 `ENTER ERA`를 누른 시점에만 `applyIdentity`와 대표 비율을
+한 번의 상태 변경으로 적용한다.
+
+- `0 / 0.5 / 1`은 2004 / 2012 / 2026 snap point다.
+- 연도와 frame aspect ratio는 구간별 선형 보간한다.
+- 실제 1080px Canvas는 드래그 중 다시 만들지 않아 편집기 성능을 격리한다.
+- Slider semantics와 방향키, Home/End, reduced-motion을 지원한다.
