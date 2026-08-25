@@ -52,20 +52,25 @@ function seededRandom(seed) {
   };
 }
 
-// 2004년 카메라폰은 30만~130만 화소였다. 실제 값을 그대로 쓰면 1080 캔버스
-// 에서는 그냥 조금 흐린 사진으로 보인다. 그 시절 화면에서 받던 인상이
-// 남도록 과장한다.
-const PHONE_BUFFER_WIDTH = 180;
-// 색 단계. 10단계쯤이면 하늘이나 살색에 띠가 보이면서도 피사체는 남는다.
-const PHONE_COLOR_LEVELS = 10;
+// 2004년 카메라폰·캠코더로 찍은 사진의 인상.
+//
+// 해상도를 낮추되 **각진 화소로 보이게 하지 않는다.** 그 시절 사진은
+// 네모 화소가 도드라지기보다 전체가 부드럽게 뭉개져 있었다. 그래서 버퍼를
+// 아주 작게 잡지 않고, 되돌릴 때 보간도 켠 채로 둔다.
+const PHONE_BUFFER_WIDTH = 300;
 
 /**
- * 피처폰으로 찍은 사진의 화질을 만든다.
+ * 피처폰·캠코더 사진의 화질을 만든다.
  *
- * 무거운 픽셀 연산을 **작게 줄인 버퍼에서만** 한다. 1080×1080 원본에
- * 직접 하면 100만 번이 넘어 편집할 때마다 버벅이지만, 180px 버퍼는
- * 2만 번이 안 된다. 어차피 결과는 저화질이라 원본 해상도로 계산할
- * 이유도 없다.
+ * 실제로 그 시절 사진을 보면 눈에 남는 것은 화소가 아니라 이 네 가지다.
+ *
+ * 1. 대비가 낮다 — 검정이 들뜨고 전체가 뿌옇다
+ * 2. 하이라이트가 날아간다 — 하늘이 통째로 하얗게 번진다
+ * 3. 보라로 기운다 — 싸구려 센서의 화이트밸런스
+ * 4. 화면이 부드럽게 뭉개진다
+ *
+ * 무거운 픽셀 연산은 작게 줄인 버퍼에서만 한다. 1080×1080 원본에 직접
+ * 하면 100만 번이 넘지만 300px 버퍼는 6만 번 남짓이다.
  *
  * @returns {OffscreenCanvas|null} 만들 수 없으면 null. 그때는 원본을 그린다.
  */
@@ -87,26 +92,90 @@ function featurePhoneFrame(image, imageBox, fit) {
   const frame = ctx.getImageData(0, 0, bufferWidth, bufferHeight);
   const data = frame.data;
   const random = seededRandom(0x5ca1ab1e);
-  const step = 255 / (PHONE_COLOR_LEVELS - 1);
 
   for (let i = 0; i < data.length; i += 4) {
-    // 어두운 곳일수록 노이즈가 크다. 저조도에서 지글거리던 그 화면이다.
-    const luma = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
-    const noise = (random() - 0.5) * 26 * (1 - luma * 0.6);
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const luma = r * 0.299 + g * 0.587 + b * 0.114;
 
-    for (let channel = 0; channel < 3; channel += 1) {
-      // 색 단계를 줄인다. 65,536색 화면에서 보이던 띠.
-      const value = Math.round((data[i + channel] + noise) / step) * step;
-      data[i + channel] = value < 0 ? 0 : value > 255 ? 255 : value;
-    }
+    // 밝은 곳일수록 더 날아간다. 하늘이 통째로 하얘지는 것이 이것이다.
+    // 문턱을 낮게 잡아야 하늘 전체가 뭉개지고, 어두운 부분은 남는다.
+    const bloom = luma > 152 ? Math.min(1, (luma - 152) / 88) : 0;
+    const noise = (random() - 0.5) * 12;
 
-    // 화이트밸런스가 늘 초록으로 기울어 있었다.
-    data[i + 1] = Math.min(255, data[i + 1] * 1.07);
-    data[i + 2] = Math.min(255, data[i + 2] * 0.95);
+    // 대비를 낮추고(0.58) 검정을 살짝만 들어 올린다(+12).
+    // 많이 올리면 전체가 하얘져서 "빛바랜 사진" 이 아니라 "밝은 사진" 이 된다.
+    // 보라 기울기는 빨강·파랑을 올리고 초록을 내려서 만든다.
+    const grade = (value, tint, bloomGain) =>
+      (128 + (value - 128) * 0.70 + 10) * tint + bloom * bloomGain + noise;
+
+    data[i] = clamp255(grade(r, 1.05, 62));
+    data[i + 1] = clamp255(grade(g, 0.975, 50));
+    data[i + 2] = clamp255(grade(b, 1.13, 68));
   }
 
   ctx.putImageData(frame, 0, 0);
   return canvas;
+}
+
+const clamp255 = (value) => (value < 0 ? 0 : value > 255 ? 255 : value);
+
+/**
+ * 사진 위에 얹는 보라 안개와 가장자리 어두움.
+ *
+ * 픽셀 단위 보정만으로는 그 시절 사진의 인상이 덜 난다. 검정이 완전히
+ * 검지 않고 보랏빛으로 들뜨는 것이 눈에 남는 부분인데, `screen` 으로
+ * 보라를 얹으면 어두운 곳일수록 크게 들려서 그 느낌이 난다.
+ */
+function drawPhoneHaze(ctx, box) {
+  ctx.save();
+
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = 'rgba(96, 68, 132, 0.15)';
+  ctx.fillRect(box.x, box.y, box.width, box.height);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // 싸구려 렌즈는 가장자리가 어두웠다.
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const radius = Math.max(box.width, box.height) * 0.7;
+  const vignette = ctx.createRadialGradient(cx, cy, radius * 0.45, cx, cy, radius);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(24,14,36,0.4)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(box.x, box.y, box.width, box.height);
+
+  ctx.restore();
+}
+
+/**
+ * 둥근 모서리 검은 테두리.
+ *
+ * 그 시절 카메라·캠코더 화면의 가장 알아보기 쉬운 표시다. 사진 위에
+ * 검은 테를 두르되 안쪽 모서리를 둥글게 판다. even-odd 규칙으로 바깥
+ * 사각형에서 안쪽 둥근 사각형을 빼면 테두리만 남는다.
+ */
+function drawViewfinderMask(ctx, box) {
+  const inset = Math.min(box.width, box.height) * 0.035;
+  const radius = Math.min(box.width, box.height) * 0.09;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(box.x, box.y, box.width, box.height);
+  // roundedRect 가 아니라 roundedRectPath 를 쓴다. 전자는 beginPath 로
+  // 바깥 사각형을 지워 버려서, 테두리가 아니라 안쪽이 까맣게 칠해진다.
+  roundedRectPath(
+    ctx,
+    box.x + inset,
+    box.y + inset,
+    box.width - inset * 2,
+    box.height - inset * 2,
+    radius
+  );
+  ctx.fillStyle = '#000000';
+  ctx.fill('evenodd');
+  ctx.restore();
 }
 
 function drawImage(ctx, state, width, height, imageBox, era) {
@@ -119,10 +188,11 @@ function drawImage(ctx, state, width, height, imageBox, era) {
 
   const phone = era === '2004' ? featurePhoneFrame(state.image, imageBox, state.fit) : null;
   if (phone) {
-    // 보간을 꺼야 화소가 네모로 보인다. 켜 두면 부드럽게 뭉개져서
-    // "저화질" 이 아니라 그냥 "흐린 사진" 이 된다.
-    ctx.imageSmoothingEnabled = false;
+    // 보간은 켠 채로 둔다. 끄면 네모 화소가 도드라져 레트로 게임처럼
+    // 보이는데, 그 시절 사진의 인상은 그게 아니라 부드러운 뭉개짐이다.
     ctx.drawImage(phone, imageBox.x, imageBox.y, imageBox.width, imageBox.height);
+    drawPhoneHaze(ctx, imageBox);
+    drawViewfinderMask(ctx, imageBox);
   } else {
     const box = fitImage(state.image, imageBox.width, imageBox.height, state.fit);
     if (box) {
@@ -141,6 +211,16 @@ function metaText(ctx, text, x, y, size, color, align = 'left') {
   ctx.fillText(text, x, y);
 }
 
+/** 이미 시작된 경로에 둥근 사각형을 **덧그린다.** beginPath 를 부르지 않는다. */
+function roundedRectPath(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
 function roundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -155,60 +235,158 @@ function roundedRect(ctx, x, y, w, h, r) {
  * 미니홈피 시대. 파스텔 배경 위의 흰 카드, 이중 테두리,
  * 투데이/토탈 카운터, BGM 표시로 2000년대 개인 홈 문법을 만든다.
  */
+/**
+ * 싸이월드 미니홈피의 링 바인더.
+ *
+ * 미니홈피를 한 장의 그림으로 떠올릴 때 가장 먼저 나오는 것이 이 고리다.
+ * 페이지 왼쪽에 금속 고리 세 개가 물려 있었다.
+ */
+function drawBinderRings(ctx, x, top, bottom, size) {
+  const count = 3;
+  const gap = (bottom - top) / (count + 1);
+
+  for (let i = 1; i <= count; i += 1) {
+    const y = top + gap * i;
+
+    // 종이에 뚫린 구멍. 안쪽이 살짝 어두워야 파인 것처럼 보인다.
+    ctx.fillStyle = '#dde5eb';
+    roundedRect(ctx, x - size * 0.34, y - size * 0.30, size * 0.68, size * 0.60, size * 0.30);
+    ctx.fill();
+
+    // 구멍을 통과하는 금속 고리. 구멍보다 크게 그려 걸쳐 있게 만든다.
+    ctx.strokeStyle = '#8d9aa4';
+    ctx.lineWidth = Math.max(2, size * 0.16);
+    roundedRect(ctx, x - size * 0.72, y - size * 0.46, size * 1.44, size * 0.92, size * 0.46);
+    ctx.stroke();
+
+    // 위쪽에 흰 선을 얹으면 금속처럼 빛나 보인다.
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = Math.max(1, size * 0.06);
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.5, y - size * 0.42);
+    ctx.lineTo(x + size * 0.5, y - size * 0.42);
+    ctx.stroke();
+  }
+}
+
+/**
+ * 2004 — 싸이월드 미니홈피.
+ *
+ * 실제 미니홈피에서 눈에 남는 것만 골랐다. 화면을 통째로 옮기면 카드가
+ * 아니라 스크린샷이 된다.
+ *
+ * - `TODAY 23 | TOTAL 12,458` — TODAY 숫자는 빨강, TOTAL 숫자는 남색.
+ *   이 색 대비가 미니홈피 상단의 인상이었다.
+ * - 왼쪽 링 바인더
+ * - 사진첩 칸
+ * - `TODAY IS...` 기분 바 — 그 아래가 다이어리 글자리다
+ * - 하단 BGM
+ */
 function drawMinihompy(ctx, width, height, imageBox, layer) {
   if (layer !== 'under') return;
+
   const pad = width * 0.05;
   const cardX = pad;
   const cardY = height * 0.05;
   const cardW = width - pad * 2;
   const cardH = height * 0.9;
+  const inner = width * 0.012;
 
-  // 흰 카드와 바깥 이중 테두리
+  // 종이 한 장. 미니홈피는 늘 흰 페이지였다.
   ctx.fillStyle = '#ffffff';
-  roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.02);
+  roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.022);
   ctx.fill();
-  ctx.strokeStyle = '#7fb3d5';
-  ctx.lineWidth = Math.max(2, width * 0.004);
-  roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.02);
-  ctx.stroke();
-  ctx.strokeStyle = '#cfe3f0';
-  ctx.lineWidth = Math.max(1, width * 0.002);
-  roundedRect(ctx, cardX + 10, cardY + 10, cardW - 20, cardH - 20, width * 0.018);
+  ctx.strokeStyle = '#b9cddb';
+  ctx.lineWidth = Math.max(2, width * 0.003);
+  roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.022);
   ctx.stroke();
 
-  // 상단 타이틀 바
-  ctx.fillStyle = '#dcecf7';
-  ctx.fillRect(cardX + 10, cardY + 10, cardW - 20, height * 0.075);
-  metaText(ctx, 'MY HOME', cardX + width * 0.05, cardY + height * 0.03, width * 0.032, '#31658c');
-  metaText(
-    ctx, 'TODAY 23   TOTAL 12,458',
-    cardX + cardW - width * 0.05, cardY + height * 0.034, width * 0.021, '#e2624f', 'right'
+  // 페이지 안쪽 연한 테두리
+  ctx.strokeStyle = '#e4eef5';
+  ctx.lineWidth = Math.max(1, width * 0.0018);
+  roundedRect(
+    ctx, cardX + inner, cardY + inner,
+    cardW - inner * 2, cardH - inner * 2, width * 0.018
+  );
+  ctx.stroke();
+
+  // TODAY / TOTAL 카운터. 숫자만 색이 달랐다.
+  const counterY = cardY + height * 0.028;
+  const counterSize = width * 0.026;
+  const left = cardX + width * 0.085;
+  let cursor = left;
+  const run = (text, color) => {
+    metaText(ctx, text, cursor, counterY, counterSize, color);
+    ctx.font = `700 ${counterSize}px ${FONT_STACK}`;
+    cursor += ctx.measureText(text).width;
+  };
+  run('TODAY ', '#5b6b76');
+  run('23', '#e2352b');
+  run('  |  ', '#c3d2dc');
+  run('TOTAL ', '#5b6b76');
+  run('12,458', '#2c4f7c');
+
+  // 미니홈피 타이틀. 이 자리가 비어 있으면 카드가 서식처럼 보인다.
+  const titleY = cardY + height * 0.085;
+  metaText(ctx, 'Director. My Life', cardX + width * 0.085, titleY, width * 0.042, '#2f8f6f');
+
+  // EDIT 칩. 타이틀 옆에 늘 붙어 있던 작은 파란 버튼이다.
+  ctx.font = `700 ${width * 0.019}px ${FONT_STACK}`;
+  const titleWidth = (() => {
+    ctx.font = `700 ${width * 0.042}px ${FONT_STACK}`;
+    return ctx.measureText('Director. My Life').width;
+  })();
+  const chipX = cardX + width * 0.085 + titleWidth + width * 0.018;
+  const chipW = width * 0.058;
+  const chipH = height * 0.028;
+  ctx.fillStyle = '#4a86c8';
+  roundedRect(ctx, chipX, titleY + height * 0.012, chipW, chipH, chipH * 0.25);
+  ctx.fill();
+  metaText(ctx, 'EDIT', chipX + chipW / 2, titleY + height * 0.017, width * 0.019, '#ffffff', 'center');
+
+  // 타이틀 아래 구분선
+  ctx.strokeStyle = '#cfe0d9';
+  ctx.lineWidth = Math.max(1, width * 0.002);
+  ctx.beginPath();
+  ctx.moveTo(cardX + width * 0.085, titleY + height * 0.058);
+  ctx.lineTo(cardX + cardW - width * 0.04, titleY + height * 0.058);
+  ctx.stroke();
+
+  // 왼쪽 링 바인더
+  drawBinderRings(
+    ctx, cardX + width * 0.03,
+    cardY + height * 0.09, cardY + cardH - height * 0.06,
+    width * 0.038
   );
 
-  // 사진 칸 흰 여백과 테두리
-  const m = width * 0.014;
+  // 사진첩 칸
+  const m = width * 0.013;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(imageBox.x - m, imageBox.y - m, imageBox.width + m * 2, imageBox.height + m * 2);
-  ctx.strokeStyle = '#a8c8dd';
+  ctx.strokeStyle = '#9fc0d6';
   ctx.lineWidth = Math.max(1, width * 0.002);
   ctx.strokeRect(imageBox.x - m, imageBox.y - m, imageBox.width + m * 2, imageBox.height + m * 2);
 
-  // 다이어리 구분 점선
-  const lineY = imageBox.y + imageBox.height + height * 0.05;
-  ctx.save();
-  ctx.strokeStyle = '#c4dcea';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([10, 8]);
-  ctx.beginPath();
-  ctx.moveTo(cardX + width * 0.05, lineY);
-  ctx.lineTo(cardX + cardW - width * 0.05, lineY);
-  ctx.stroke();
-  ctx.restore();
+  // TODAY IS... 기분 바. 사진 아래, 다이어리 글 위에 놓인다.
+  const barX = imageBox.x - m;
+  const barW = imageBox.width + m * 2;
+  const barY = imageBox.y + imageBox.height + height * 0.028;
+  const barH = height * 0.045;
 
-  // 하단 BGM 표시
+  ctx.fillStyle = '#f4f9fc';
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.strokeStyle = '#9fc0d6';
+  ctx.lineWidth = Math.max(1, width * 0.002);
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  const barTextY = barY + barH * 0.28;
+  metaText(ctx, 'TODAY IS...', barX + width * 0.022, barTextY, width * 0.022, '#2c6ea8');
+  metaText(ctx, '♥  그냥', barX + barW - width * 0.022, barTextY, width * 0.022, '#e2624f', 'right');
+
+  // 하단 BGM
   metaText(
     ctx, '♪  BGM  —  그 시절 그 노래',
-    cardX + width * 0.05, cardY + cardH - height * 0.055, width * 0.022, '#7fa8c4'
+    cardX + width * 0.085, cardY + cardH - height * 0.05, width * 0.021, '#8aa9bf'
   );
 }
 

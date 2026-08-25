@@ -225,41 +225,73 @@ test('같은 설정으로 다시 그리면 필름 입자까지 똑같다', async
   assert.notEqual(other.hash, first.hash, '필름 시대가 아무 차이도 만들지 않았다');
 });
 
-test('2004 는 사진을 피처폰 화질로 바꾼다', async () => {
+test('2004 는 사진을 그 시절 화질로 바꾼다', async () => {
   // 사진을 올려야 의미가 있는 검사다. 배경색만으로는 화질 처리가 드러나지 않는다.
   await page.locator('input[type="file"]').first().setInputFiles('public/sample/landscape-1600x600.png');
   await page.waitForTimeout(700);
   await setRatio('1:1');
   await setPersona('친한 친구');
 
-  /** 캔버스에 실제로 쓰인 색의 가짓수. 화질을 떨어뜨리면 크게 줄어든다. */
-  const colorCount = () =>
+  /**
+   * 캔버스 한가운데를 재서 그 시절 화질의 두 가지 특징을 숫자로 만든다.
+   *
+   * 가운데만 보는 이유는 2004 는 사진첩 칸 안에, 2026 은 화면 전체에
+   * 사진이 들어가서 그렇다. 가운데는 두 경우 모두 사진이다.
+   *
+   * 색 가짓수로는 잴 수 없다. 화소를 각지게 만드는 방식이 아니라 부드럽게
+   * 뭉개는 방식이라, 보간이 만들어 내는 중간색 때문에 오히려 늘어난다.
+   */
+  const photoStats = () =>
     page.evaluate(() => {
       const canvas = document.querySelector('canvas');
+      const x = Math.round(canvas.width * 0.35);
+      const y = Math.round(canvas.height * 0.35);
+      const w = Math.round(canvas.width * 0.3);
+      const h = Math.round(canvas.height * 0.2);
       const data = canvas
         .getContext('2d', { willReadFrequently: true })
-        .getImageData(0, 0, canvas.width, canvas.height).data;
-      const seen = new Set();
+        .getImageData(x, y, w, h).data;
+
+      let sum = 0;
+      let sumSquares = 0;
+      let sumGreen = 0;
+      let sumBlue = 0;
+      const count = data.length / 4;
+
       for (let i = 0; i < data.length; i += 4) {
-        seen.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
+        const luma = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        sum += luma;
+        sumSquares += luma * luma;
+        sumGreen += data[i + 1];
+        sumBlue += data[i + 2];
       }
-      return seen.size;
+      const mean = sum / count;
+      return {
+        // 밝기가 얼마나 퍼져 있는가. 대비를 낮추면 줄어든다.
+        contrast: Math.sqrt(Math.max(0, sumSquares / count - mean * mean)),
+        // 파랑이 초록보다 얼마나 강한가. 보라로 기울수록 커진다.
+        purple: (sumBlue - sumGreen) / count,
+      };
     });
 
   await setEra('2026');
   await page.waitForTimeout(150);
-  const clean = await colorCount();
+  const clean = await photoStats();
   const cleanPng = await exportedPng();
 
   await setEra('2004');
   await page.waitForTimeout(150);
-  const phone = await colorCount();
-  const phonePng = await exportedPng();
+  const aged = await photoStats();
+  const agedPng = await exportedPng();
 
-  assert.notEqual(phonePng.hash, cleanPng.hash, '2004 가 사진을 그대로 두었다');
+  assert.notEqual(agedPng.hash, cleanPng.hash, '2004 가 사진을 그대로 두었다');
   assert.ok(
-    phone < clean / 2,
-    `색 가짓수가 충분히 줄지 않았다: 2026 ${clean} → 2004 ${phone}`
+    aged.contrast < clean.contrast * 0.85,
+    `대비가 충분히 낮아지지 않았다: 2026 ${clean.contrast.toFixed(1)} → 2004 ${aged.contrast.toFixed(1)}`
+  );
+  assert.ok(
+    aged.purple > clean.purple + 6,
+    `보라 기울기가 충분하지 않다: 2026 ${clean.purple.toFixed(1)} → 2004 ${aged.purple.toFixed(1)}`
   );
 
   // 같은 설정으로 다시 그려도 같아야 한다. 노이즈에 고정 씨앗을 쓰기 때문이다.
@@ -268,5 +300,5 @@ test('2004 는 사진을 피처폰 화질로 바꾼다', async () => {
   await setEra('2004');
   await page.waitForTimeout(150);
   const again = await exportedPng();
-  assert.equal(again.hash, phonePng.hash, '같은 설정인데 다시 그린 결과가 다르다');
+  assert.equal(again.hash, agedPng.hash, '같은 설정인데 다시 그린 결과가 다르다');
 });

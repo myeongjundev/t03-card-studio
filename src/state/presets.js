@@ -95,10 +95,26 @@ export const ERAS = [
  * 바뀌면 방금 무엇이 바뀐 것인지 알기 어렵다.
  */
 export const COMBINATION_STYLES = {
+  // 2004 셋은 모두 같은 자리를 쓴다. 싸이월드 페이지에서 다이어리 글이
+  // 들어가던 칸이다 — 기분 바 아래, BGM 줄 위. 이 범위를 벗어나면 글이
+  // 장식과 겹친다. 색만 Persona 마다 다르게 둔다.
+  //
+  // 흰 페이지 위에 얹히므로 외곽선은 쓰지 않는다. 흰 글자에 검은 테두리를
+  // 두르면 속이 빈 글자처럼 보인다.
+  'normal:2004': {
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#e6edf2', color: '#3a4a5a',
+    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 68,
+    lineHeight: 1.5, align: 'left', textX: 0.14, textY: 0.8,
+  },
+  'social:2004': {
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#f2e6ee', color: '#c2185b',
+    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 68,
+    lineHeight: 1.5, align: 'left', textX: 0.14, textY: 0.8,
+  },
   'close-friends:2004': {
-    recommendedRatio: '1:1', fit: 'cover', bgColor: '#dfe8ed', color: '#303b55',
-    strokeColor: '#ffffff', strokeWidth: 0.025, fontSize: 82,
-    lineHeight: 1.45, align: 'left', textX: 0.12, textY: 0.81,
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#dfe8ed', color: '#2c6ea8',
+    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 68,
+    lineHeight: 1.5, align: 'left', textX: 0.14, textY: 0.8,
   },
   'normal:2012': {
     recommendedRatio: '1:1', fit: 'cover', bgColor: '#eef1f4', color: '#172033',
