@@ -282,9 +282,43 @@ function drawBinderRings(ctx, x, top, bottom, size) {
  * - `TODAY IS...` 기분 바 — 그 아래가 다이어리 글자리다
  * - 하단 BGM
  */
-function drawMinihompy(ctx, width, height, imageBox, layer) {
+/**
+ * 미니홈피는 누구에게 보여 주느냐에 따라 꾸미는 방식이 달랐다.
+ *
+ * 여기가 Persona 가 실제로 하는 일이다. 전에는 세 모습이 글자색만 달라서
+ * 골라도 바뀐 것이 없어 보였다 — 픽셀로 재 보니 0.5~6.9% 차이였다.
+ */
+const MINIHOMPY_BY_PERSONA = {
+  normal: {
+    accent: '#2f8f6f',
+    title: 'Director. My Life',
+    mood: '그냥',
+    moodColor: '#e2624f',
+    barTint: '#f4f9fc',
+    badge: null,
+  },
+  social: {
+    accent: '#d1467f',
+    title: '★ 오늘의 나 ★',
+    mood: '신남',
+    moodColor: '#d1467f',
+    barTint: '#fdf1f6',
+    badge: { text: '일촌평 12', color: '#d1467f' },
+  },
+  'close-friends': {
+    accent: '#2c6ea8',
+    title: '나만 보는 일기',
+    mood: '피곤',
+    moodColor: '#2c6ea8',
+    barTint: '#f2f7fb',
+    badge: { text: '비공개', color: '#2c6ea8' },
+  },
+};
+
+function drawMinihompy(ctx, width, height, imageBox, layer, persona) {
   if (layer !== 'under') return;
 
+  const skin = MINIHOMPY_BY_PERSONA[persona] ?? MINIHOMPY_BY_PERSONA.normal;
   const pad = width * 0.05;
   const cardX = pad;
   const cardY = height * 0.05;
@@ -328,18 +362,18 @@ function drawMinihompy(ctx, width, height, imageBox, layer) {
 
   // 미니홈피 타이틀. 이 자리가 비어 있으면 카드가 서식처럼 보인다.
   const titleY = cardY + height * 0.085;
-  metaText(ctx, 'Director. My Life', cardX + width * 0.085, titleY, width * 0.042, '#2f8f6f');
+  metaText(ctx, skin.title, cardX + width * 0.085, titleY, width * 0.042, skin.accent);
 
   // EDIT 칩. 타이틀 옆에 늘 붙어 있던 작은 파란 버튼이다.
   ctx.font = `700 ${width * 0.019}px ${FONT_STACK}`;
   const titleWidth = (() => {
     ctx.font = `700 ${width * 0.042}px ${FONT_STACK}`;
-    return ctx.measureText('Director. My Life').width;
+    return ctx.measureText(skin.title).width;
   })();
   const chipX = cardX + width * 0.085 + titleWidth + width * 0.018;
   const chipW = width * 0.058;
   const chipH = height * 0.028;
-  ctx.fillStyle = '#4a86c8';
+  ctx.fillStyle = skin.accent;
   roundedRect(ctx, chipX, titleY + height * 0.012, chipW, chipH, chipH * 0.25);
   ctx.fill();
   metaText(ctx, 'EDIT', chipX + chipW / 2, titleY + height * 0.017, width * 0.019, '#ffffff', 'center');
@@ -373,20 +407,48 @@ function drawMinihompy(ctx, width, height, imageBox, layer) {
   const barY = imageBox.y + imageBox.height + height * 0.028;
   const barH = height * 0.045;
 
-  ctx.fillStyle = '#f4f9fc';
+  ctx.fillStyle = skin.barTint;
   ctx.fillRect(barX, barY, barW, barH);
   ctx.strokeStyle = '#9fc0d6';
   ctx.lineWidth = Math.max(1, width * 0.002);
   ctx.strokeRect(barX, barY, barW, barH);
 
   const barTextY = barY + barH * 0.28;
-  metaText(ctx, 'TODAY IS...', barX + width * 0.022, barTextY, width * 0.022, '#2c6ea8');
-  metaText(ctx, '♥  그냥', barX + barW - width * 0.022, barTextY, width * 0.022, '#e2624f', 'right');
+  metaText(ctx, 'TODAY IS...', barX + width * 0.022, barTextY, width * 0.022, skin.accent);
+  metaText(
+    ctx, `♥  ${skin.mood}`,
+    barX + barW - width * 0.022, barTextY, width * 0.022, skin.moodColor, 'right'
+  );
+
+  // 누구에게 열어 둔 홈피인지 사진 위에 표시한다. 모습을 바꿨을 때
+  // 가장 먼저 눈에 들어오는 자리다.
+  if (skin.badge) {
+    const label = skin.badge.text;
+    const size = width * 0.021;
+    ctx.font = `700 ${size}px ${FONT_STACK}`;
+    const padX = width * 0.016;
+    const badgeW = ctx.measureText(label).width + padX * 2;
+    const badgeH = height * 0.036;
+    const badgeX = imageBox.x + imageBox.width - badgeW - width * 0.018;
+    const badgeY = imageBox.y + height * 0.018;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    roundedRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH * 0.32);
+    ctx.fill();
+    ctx.strokeStyle = skin.badge.color;
+    ctx.lineWidth = Math.max(1, width * 0.002);
+    roundedRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH * 0.32);
+    ctx.stroke();
+    metaText(
+      ctx, label, badgeX + badgeW / 2, badgeY + badgeH * 0.26,
+      size, skin.badge.color, 'center'
+    );
+  }
 
   // 하단 BGM
   metaText(
     ctx, '♪  BGM  —  그 시절 그 노래',
-    cardX + width * 0.085, cardY + cardH - height * 0.05, width * 0.021, '#8aa9bf'
+    cardX + width * 0.085, cardY + cardH - height * 0.05, width * 0.021, skin.accent
   );
 }
 
@@ -521,7 +583,7 @@ function drawComposition(ctx, state, width, height, composition, layer) {
 
   ctx.save();
   if (composition.era === '2004') {
-    drawMinihompy(ctx, width, height, composition.imageBox, layer);
+    drawMinihompy(ctx, width, height, composition.imageBox, layer, state.persona);
   } else if (composition.era === '2012') {
     drawFilm(ctx, width, height, composition.imageBox, layer, composition.era);
   } else {
@@ -569,6 +631,53 @@ export function layoutText(ctx, state, width, height) {
 /** 값을 [min, max] 안으로 넣되, 범위가 뒤집혀 있으면 min 을 택한다. */
 const clamp = (value, min, max) => (max < min ? min : Math.min(Math.max(value, min), max));
 
+/**
+ * 모습(Persona)이 문구를 어떻게 받쳐 주는가.
+ *
+ * 모습은 그동안 주로 배경색을 바꿨는데, **사진을 올리면 배경색이 보이지
+ * 않는다.** 사진 위에 문구를 얹는 것이 이 도구의 기본 사용법이라, 정작
+ * 그때 모습을 골라도 바뀌는 것이 거의 없었다 — 픽셀로 재니 2~9% 였다.
+ *
+ * 그래서 사진 위에도 남는 층을 모습마다 다르게 깐다. 시대 장식과 겹치지
+ * 않는다. 시대는 "언제" 를, 모습은 "누구에게" 를 맡는다.
+ */
+function drawPersonaEmphasis(ctx, state, width, height, block) {
+  // 투명 배경은 장식을 그리지 않는다는 약속을 여기서도 지킨다.
+  if (state.transparentBg) return;
+
+  if (state.persona === 'social') {
+    // 보여지는 나: 피드에서 눈에 걸리도록 아래를 크게 눌러 준다.
+    const gradient = ctx.createLinearGradient(0, height * 0.38, 0, height);
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0.62)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, height * 0.38, width, height * 0.62);
+    return;
+  }
+
+  if (state.persona === 'close-friends') {
+    // 가까운 사람 앞의 나: 문구만 감싸는 쪽지. 화면 전체가 아니라
+    // 글자 블록에만 붙어서 사적인 느낌이 난다.
+    const padX = width * 0.045;
+    const padY = height * 0.035;
+    const x = Math.max(0, block.left - padX);
+    const y = Math.max(0, block.top - padY);
+    const w = Math.min(width - x, block.width + padX * 2);
+    const h = Math.min(height - y, block.height + padY * 2);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(18, 22, 30, 0.52)';
+    roundedRect(ctx, x, y, w, h, Math.min(w, h) * 0.14);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = Math.max(1, width * 0.002);
+    roundedRect(ctx, x, y, w, h, Math.min(w, h) * 0.14);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // 기본은 아무것도 깔지 않는다. 담백하게 두는 것이 그 모습이다.
+}
+
 function drawText(ctx, state, width, height) {
   const empty = { lineCount: 0, fontSize: state.fontSize, shrunk: false, area: null };
   if (String(state.text ?? '').trim() === '') return empty; // 빈 문구여도 앱이 깨지지 않는다
@@ -608,6 +717,18 @@ function drawText(ctx, state, width, height) {
     marginY,
     height - marginY - blockHeight
   );
+
+  // 문구를 그리기 직전에 모습별 받침을 깐다. 글자 블록의 실제 크기를
+  // 알아야 쪽지 배경을 정확히 맞출 수 있어서 이 자리에 둔다.
+  drawPersonaEmphasis(ctx, state, width, height, {
+    left,
+    top,
+    width: blockWidth,
+    height: blockHeight,
+  });
+
+  // 받침을 그리면서 바뀐 채우기 색을 문구 색으로 되돌린다.
+  ctx.fillStyle = state.color;
 
   const x = left + anchorOffset;
   const firstY = top + strokeBleed + fontSize / 2;

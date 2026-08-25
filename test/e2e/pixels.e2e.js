@@ -408,3 +408,53 @@ test('접이식 묶음이 열리고 닫히며 요약이 현재 값을 보여 준
   assert.notEqual(after, before, '값을 바꿨는데 요약이 그대로다');
   assert.match(after, /200px/, `요약이 새 값을 보여주지 않는다: ${after}`);
 });
+
+test('사진을 올린 뒤에도 모습을 바꾸면 눈에 띄게 달라진다', async () => {
+  // 모습은 그동안 주로 배경색을 바꿨는데, 사진을 올리면 배경색이 보이지
+  // 않는다. 사진 위에 문구를 얹는 것이 기본 사용법이라 정작 그때 모습이
+  // 하는 일이 거의 없었다 — 세 모습의 픽셀 차이가 2~9% 였다.
+  await page.locator('input[type="file"]').first().setInputFiles('public/sample/landscape-1600x600.png');
+  await page.waitForTimeout(700);
+  await setRatio('1:1');
+
+  /** 캔버스를 성기게 훑어 온다. 전부 넘기면 느리다. */
+  const sample = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      const data = canvas
+        .getContext('2d', { willReadFrequently: true })
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      const out = [];
+      for (let i = 0; i < data.length; i += 32) out.push(data[i], data[i + 1], data[i + 2]);
+      return out;
+    });
+
+  const difference = (a, b) => {
+    let differing = 0;
+    for (let i = 0; i < a.length; i += 1) if (Math.abs(a[i] - b[i]) > 12) differing += 1;
+    return (100 * differing) / a.length;
+  };
+
+  for (const era of ['2004', '2012', '2026']) {
+    const shots = {};
+    for (const persona of ['기본', '소셜', '친한 친구']) {
+      await setPersona(persona);
+      await setEra(era);
+      await page.waitForTimeout(200);
+      shots[persona] = await sample();
+    }
+
+    const pairs = [
+      ['기본', '소셜'],
+      ['기본', '친한 친구'],
+      ['소셜', '친한 친구'],
+    ];
+    for (const [a, b] of pairs) {
+      const changed = difference(shots[a], shots[b]);
+      assert.ok(
+        changed > 3,
+        `${era} 에서 ${a} 와 ${b} 가 거의 같다: ${changed.toFixed(1)}% 만 달라졌다`
+      );
+    }
+  }
+});

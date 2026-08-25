@@ -101,20 +101,26 @@ export const COMBINATION_STYLES = {
   //
   // 흰 페이지 위에 얹히므로 외곽선은 쓰지 않는다. 흰 글자에 검은 테두리를
   // 두르면 속이 빈 글자처럼 보인다.
+  // 셋 다 다이어리 칸(기분 바 아래 ~ BGM 줄 위) 안에 있어야 하지만,
+  // 그 안에서는 서로 다르게 쓴다. 전에는 위치·크기를 똑같이 두고 색만
+  // 바꿨더니 모습을 골라도 바뀐 것이 없어 보였다(픽셀 차이 0.5~6.9%).
   'normal:2004': {
-    recommendedRatio: '1:1', fit: 'cover', bgColor: '#e6edf2', color: '#3a4a5a',
-    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 68,
-    lineHeight: 1.5, align: 'left', textX: 0.14, textY: 0.8,
+    // 담백한 기록: 왼쪽에 붙여 짧고 또렷하게.
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#e6edf2', color: '#33414f',
+    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 74,
+    lineHeight: 1.4, align: 'left', textX: 0.13, textY: 0.795,
   },
   'social:2004': {
-    recommendedRatio: '1:1', fit: 'cover', bgColor: '#f2e6ee', color: '#c2185b',
-    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 68,
-    lineHeight: 1.5, align: 'left', textX: 0.14, textY: 0.8,
+    // 보여지는 나: 가운데로 모으고 크게. 자랑하듯 쓰던 글씨다.
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#f4e3ec', color: '#c2185b',
+    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 88,
+    lineHeight: 1.25, align: 'center', textX: 0.5, textY: 0.8,
   },
   'close-friends:2004': {
-    recommendedRatio: '1:1', fit: 'cover', bgColor: '#dfe8ed', color: '#2c6ea8',
-    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 68,
-    lineHeight: 1.5, align: 'left', textX: 0.14, textY: 0.8,
+    // 나만 보는 일기: 작게, 줄 간격을 넓혀 길게 적는 느낌.
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#dde7ee', color: '#2c6ea8',
+    strokeColor: '#ffffff', strokeWidth: 0, fontSize: 60,
+    lineHeight: 1.7, align: 'left', textX: 0.16, textY: 0.805,
   },
   'normal:2012': {
     recommendedRatio: '1:1', fit: 'cover', bgColor: '#eef1f4', color: '#172033',
