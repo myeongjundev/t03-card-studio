@@ -1,5 +1,6 @@
 import { fitImage } from './fitImage.js';
 import { wrapText } from './wrapText.js';
+import { getComposition } from './composition.js';
 
 /**
  * 카드 한 장을 그리는 유일한 함수.
@@ -34,13 +35,190 @@ function drawBackground(ctx, state, width, height) {
   ctx.fillRect(0, 0, width, height);
 }
 
-function drawImage(ctx, state, width, height) {
+function drawImage(ctx, state, width, height, imageBox) {
   if (!state.image) return;
-  const box = fitImage(state.image, width, height, state.fit);
+  const box = fitImage(state.image, imageBox.width, imageBox.height, state.fit);
   if (!box) return;
-  ctx.drawImage(state.image, box.dx, box.dy, box.dw, box.dh);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(imageBox.x, imageBox.y, imageBox.width, imageBox.height);
+  ctx.clip();
+  ctx.drawImage(
+    state.image,
+    imageBox.x + box.dx,
+    imageBox.y + box.dy,
+    box.dw,
+    box.dh
+  );
+  ctx.restore();
 }
 
+function metaText(ctx, text, x, y, size, color, align = 'left') {
+  ctx.font = `700 ${size}px ${FONT_STACK}`;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+
+function roundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/**
+ * 미니홈피 시대. 파스텔 배경 위의 흰 카드, 이중 테두리,
+ * 투데이/토탈 카운터, BGM 표시로 2000년대 개인 홈 문법을 만든다.
+ */
+function drawMinihompy(ctx, width, height, imageBox, layer) {
+  if (layer !== 'under') return;
+  const pad = width * 0.05;
+  const cardX = pad;
+  const cardY = height * 0.05;
+  const cardW = width - pad * 2;
+  const cardH = height * 0.9;
+
+  // 흰 카드와 바깥 이중 테두리
+  ctx.fillStyle = '#ffffff';
+  roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.02);
+  ctx.fill();
+  ctx.strokeStyle = '#7fb3d5';
+  ctx.lineWidth = Math.max(2, width * 0.004);
+  roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.02);
+  ctx.stroke();
+  ctx.strokeStyle = '#cfe3f0';
+  ctx.lineWidth = Math.max(1, width * 0.002);
+  roundedRect(ctx, cardX + 10, cardY + 10, cardW - 20, cardH - 20, width * 0.018);
+  ctx.stroke();
+
+  // 상단 타이틀 바
+  ctx.fillStyle = '#dcecf7';
+  ctx.fillRect(cardX + 10, cardY + 10, cardW - 20, height * 0.075);
+  metaText(ctx, 'MY HOME', cardX + width * 0.05, cardY + height * 0.03, width * 0.032, '#31658c');
+  metaText(
+    ctx, 'TODAY 23   TOTAL 12,458',
+    cardX + cardW - width * 0.05, cardY + height * 0.034, width * 0.021, '#e2624f', 'right'
+  );
+
+  // 사진 칸 흰 여백과 테두리
+  const m = width * 0.014;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(imageBox.x - m, imageBox.y - m, imageBox.width + m * 2, imageBox.height + m * 2);
+  ctx.strokeStyle = '#a8c8dd';
+  ctx.lineWidth = Math.max(1, width * 0.002);
+  ctx.strokeRect(imageBox.x - m, imageBox.y - m, imageBox.width + m * 2, imageBox.height + m * 2);
+
+  // 다이어리 구분 점선
+  const lineY = imageBox.y + imageBox.height + height * 0.05;
+  ctx.save();
+  ctx.strokeStyle = '#c4dcea';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([10, 8]);
+  ctx.beginPath();
+  ctx.moveTo(cardX + width * 0.05, lineY);
+  ctx.lineTo(cardX + cardW - width * 0.05, lineY);
+  ctx.stroke();
+  ctx.restore();
+
+  // 하단 BGM 표시
+  metaText(
+    ctx, '♪  BGM  —  그 시절 그 노래',
+    cardX + width * 0.05, cardY + cardH - height * 0.055, width * 0.022, '#7fa8c4'
+  );
+}
+
+/**
+ * 필름 시대. 검은 필름 베이스에 좌우 스프로킷 홀을 뚫고,
+ * 사진 위에 비네팅을 얹은 뒤 주황색 날짜를 각인한다.
+ */
+function drawFilm(ctx, width, height, imageBox, layer) {
+  if (layer === 'over') {
+    // 비네팅과 날짜 각인은 사진 위에 얹혀야 한다.
+    const cx = imageBox.x + imageBox.width / 2;
+    const cy = imageBox.y + imageBox.height / 2;
+    const r = Math.max(imageBox.width, imageBox.height) * 0.75;
+    const vignette = ctx.createRadialGradient(cx, cy, r * 0.35, cx, cy, r);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(20,12,4,0.55)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(imageBox.x, imageBox.y, imageBox.width, imageBox.height);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,140,40,0.9)';
+    ctx.shadowBlur = width * 0.014;
+    metaText(
+      ctx, "'04 8 24",
+      imageBox.x + imageBox.width - width * 0.03,
+      imageBox.y + imageBox.height - height * 0.048,
+      width * 0.031, '#ff9436', 'right'
+    );
+    ctx.restore();
+    return;
+  }
+
+  // 필름 베이스
+  ctx.fillStyle = '#17140f';
+  ctx.fillRect(0, 0, width, height);
+
+  // 좌우 스프로킷 홀
+  const holeW = width * 0.045;
+  const holeH = height * 0.022;
+  const gap = height * 0.038;
+  ctx.fillStyle = '#e8e2d4';
+  for (let y = height * 0.03; y < height - holeH; y += gap) {
+    roundedRect(ctx, width * 0.025, y, holeW, holeH, holeH * 0.3);
+    ctx.fill();
+    roundedRect(ctx, width - width * 0.025 - holeW, y, holeW, holeH, holeH * 0.3);
+    ctx.fill();
+  }
+
+  // 필름 표기
+  metaText(ctx, 'COLOR 400', imageBox.x, imageBox.y - height * 0.045, width * 0.026, '#d8cdb4');
+  metaText(
+    ctx, '12A  →', imageBox.x + imageBox.width, imageBox.y - height * 0.045,
+    width * 0.026, '#c8562f', 'right'
+  );
+}
+
+/** 숏폼 시대. 하단 그라데이션으로 자막이 읽히게 만든다. */
+function drawShortForm(ctx, width, height, persona, layer) {
+  // 그라데이션과 자막 표기는 사진을 덮어야 읽힌다.
+  if (layer !== 'over') return;
+  const gradient = ctx.createLinearGradient(0, height * 0.42, 0, height);
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.72)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, height * 0.42, width, height * 0.58);
+
+  const topLabel = persona === 'close-friends' ? '친한 친구에게만' : '지금 · 실시간';
+  metaText(ctx, topLabel, width * 0.07, height * 0.06, width * 0.024, '#ffffff');
+  metaText(ctx, '#오늘의기록', width * 0.07, height * 0.9, width * 0.024, 'rgba(255,255,255,0.85)');
+}
+
+/**
+ * 시대 문법을 만드는 프레임과 메타데이터. 모두 미리보기 Canvas에 직접 그린다.
+ *
+ * 투명 배경을 켠 상태에서는 아무것도 그리지 않는다. 장식이 불투명 픽셀을
+ * 만들어 버리면 투명 PNG를 기대한 사용자가 배경이 박힌 파일을 받게 된다.
+ */
+function drawComposition(ctx, state, width, height, composition, layer) {
+  if (state.transparentBg) return;
+
+  ctx.save();
+  if (composition.era === '2004') {
+    drawMinihompy(ctx, width, height, composition.imageBox, layer);
+  } else if (composition.era === '2012') {
+    drawFilm(ctx, width, height, composition.imageBox, layer);
+  } else {
+    drawShortForm(ctx, width, height, state.persona, layer);
+  }
+  ctx.restore();
+}
 const blockHeightOf = (lineCount, fontSize, lineHeight) =>
   lineCount === 0 ? 0 : (lineCount - 1) * fontSize * lineHeight + fontSize;
 
@@ -164,7 +342,14 @@ function drawText(ctx, state, width, height) {
  *   실제로 그린 결과. fontSize 는 자동 축소가 적용된 뒤의 값이다.
  */
 export function renderCard(ctx, state, width, height) {
+  const composition = getComposition(state, width, height);
+
   drawBackground(ctx, state, width, height);
-  drawImage(ctx, state, width, height);
+  // 프레임 배경(미니홈피 카드, 필름 베이스)은 사진보다 먼저 깔아야 한다.
+  drawComposition(ctx, state, width, height, composition, 'under');
+  drawImage(ctx, state, width, height, composition.imageBox);
+  // 비네팅·날짜 각인·카운터처럼 사진 위에 얹히는 것은 나중에 그린다.
+  drawComposition(ctx, state, width, height, composition, 'over');
+
   return drawText(ctx, state, width, height);
 }

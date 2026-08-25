@@ -19,6 +19,8 @@ export const RATIO_KEYS = Object.keys(RATIOS);
 
 export const FITS = ['cover', 'contain'];
 export const ALIGNS = ['left', 'center', 'right'];
+export const PERSONA_KEYS = ['normal', 'social', 'close-friends'];
+export const ERA_KEYS = ['2004', '2012', '2026'];
 
 /** 값 범위. JSON 가져오기 검증(src/templates/schema.js)에서도 같은 상수를 쓴다. */
 export const LIMITS = {
@@ -52,10 +54,12 @@ export function normalizeHexColor(value, fallback) {
 export function createInitialState() {
   return {
     ratio: '1:1',
+    persona: 'normal',
+    era: '2026',
     image: null, // HTMLImageElement. 런타임 전용이라 템플릿에 저장하지 않는다.
     imageName: '',
     fit: 'cover',
-    bgColor: '#1b2a4a',
+    bgColor: '#26334a',
     transparentBg: false,
     text: '오늘도\n무사히',
     textX: 0.5,
@@ -64,8 +68,8 @@ export function createInitialState() {
     color: '#ffffff',
     // 자막처럼 검은 외곽선을 기본으로 둔다. 어떤 배경 위에서도 글자가 읽히고,
     // 결과물이 편집기 출력물이 아니라 짤처럼 보인다.
-    strokeWidth: 0.08,
-    strokeColor: '#000000',
+    strokeWidth: 0.065,
+    strokeColor: '#111111',
     lineHeight: 1.25,
     align: 'center',
   };
@@ -90,6 +94,8 @@ export function clampState(state) {
   return {
     ...state,
     ratio: pickFrom(state.ratio, RATIO_KEYS, base.ratio),
+    persona: pickFrom(state.persona, PERSONA_KEYS, base.persona),
+    era: pickFrom(state.era, ERA_KEYS, base.era),
     fit: pickFrom(state.fit, FITS, base.fit),
     align: pickFrom(state.align, ALIGNS, base.align),
     bgColor: normalizeHexColor(state.bgColor, base.bgColor),

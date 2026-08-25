@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateImportPayload } from '../src/templates/schema.js';
+import { validateImportPayload, templateFromState, stateFromTemplate } from '../src/templates/schema.js';
 import { clampState, createInitialState } from '../src/state/editorState.js';
 
 const validTemplate = (patch = {}) => ({
@@ -31,6 +31,8 @@ test('존재하는 선택 필드는 잘못된 타입이나 값을 거부한다',
     { transparentBg: 'false' },
     { fit: 'invalid' },
     { align: 42 },
+    { persona: 'unknown' },
+    { era: '1999' },
   ]) {
     assert.equal(validateImportPayload(payload(validTemplate(patch))).ok, false);
   }
@@ -71,4 +73,30 @@ test('외곽선 값이 있으면 타입과 범위를 검사한다', () => {
   const badColor = validateImportPayload(payload(validTemplate({ strokeColor: '검정' })));
   assert.equal(badColor.ok, false);
   assert.match(badColor.message, /strokeColor/);
+});
+
+test('Persona와 Era는 schemaVersion 1 선택 필드로 왕복한다', () => {
+  const state = {
+    ...createInitialState(),
+    persona: 'close-friends',
+    era: '2004',
+  };
+  const template = templateFromState(state, '시대 조합');
+  const result = validateImportPayload(payload(template));
+  assert.equal(result.ok, true);
+  const restored = stateFromTemplate(result.templates[0], createInitialState());
+  assert.equal(restored.persona, 'close-friends');
+  assert.equal(restored.era, '2004');
+});
+
+test('이전 PROFESSIONAL 데이터는 기본 Persona로 안전하게 이관한다', () => {
+  const result = validateImportPayload(payload(validTemplate({ persona: 'professional', era: '2012' })));
+  assert.equal(result.ok, true);
+  assert.equal(result.templates[0].persona, 'normal');
+});
+
+test('삭제된 CHAOTIC 데이터도 지우지 않고 기본 Persona로 이관한다', () => {
+  const result = validateImportPayload(payload(validTemplate({ persona: 'chaotic', era: '2026' })));
+  assert.equal(result.ok, true);
+  assert.equal(result.templates[0].persona, 'normal');
 });

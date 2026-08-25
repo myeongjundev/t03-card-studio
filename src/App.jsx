@@ -7,8 +7,7 @@ import {
 import { renderCard } from './render/renderCard.js';
 import { checkTextContrast } from './render/contrast.js';
 import { buildFileName, downloadCanvas, copyCanvasImage } from './io/exportImage.js';
-import { downloadAllRatios } from './io/exportAllRatios.js';
-import { PRESETS, applyPreset } from './state/presets.js';
+import { PRESETS, ERAS, applyPreset, applyEra } from './state/presets.js';
 import {
   createHistory,
   recordChange,
@@ -454,13 +453,25 @@ export default function App() {
     [update]
   );
 
-  /** 프리셋은 보이는 방식만 바꾼다. 쓰던 문구와 고른 이미지는 유지한다. */
+  /** Persona는 보이는 방식만 바꾸며, 한 번의 독립된 되돌리기 단계가 된다. */
   const usePreset = useCallback((presetId) => {
+    lastChangeAtRef.current = 0;
     setState((prev) => clampState(applyPreset(prev, presetId)));
     const preset = PRESETS.find((item) => item.id === presetId);
     setNotice({
       type: 'success',
-      text: `'${preset?.name}' 스타일을 적용했습니다. 문구는 그대로 두었습니다.`,
+      text: `'${preset?.name}' 모습을 적용했습니다. 문구와 이미지는 그대로 두었습니다.`,
+    });
+  }, []);
+
+  /** Era 변경도 Persona와 마찬가지로 하나의 독립된 편집 행동이다. */
+  const useEra = useCallback((eraId) => {
+    lastChangeAtRef.current = 0;
+    setState((prev) => clampState(applyEra(prev, eraId)));
+    const era = ERAS.find((item) => item.id === eraId);
+    setNotice({
+      type: 'success',
+      text: `${era?.label} 시대를 적용했습니다. 이미지와 문구는 그대로 두었습니다.`,
     });
   }, []);
 
@@ -499,42 +510,21 @@ export default function App() {
     }
   }, [state.ratio]);
 
-  /**
-   * 세 비율을 한 번에 내려받는다.
-   *
-   * 현재 보이는 비율은 미리보기 캔버스에서 다운로드로 바로 이어지지만,
-   * 나머지 두 비율은 화면에 그려져 있지 않으므로 downloadAllRatios 안에서
-   * 새로 그린다. renderCard 를 그대로 재사용하고 컨텍스트 설정(willReadFrequently)도
-   * 미리보기와 맞춰서, 세 파일 모두 미리보기와 같은 방식으로 만들어진다.
-   */
-  const [batchDownloading, setBatchDownloading] = useState(false);
-
-  const handleDownloadAll = useCallback(async () => {
-    setBatchDownloading(true);
-    try {
-      const result = await downloadAllRatios(state);
-      setNotice({
-        type: result.ok ? 'success' : 'error',
-        text: result.ok
-          ? `세 비율 이미지를 모두 내려받았습니다. (${result.files.length}개)`
-          : result.message,
-      });
-    } finally {
-      setBatchDownloading(false);
-    }
-  }, [state]);
-
   return (
     <div className="app">
       <header className="masthead">
-        <h1>짤·카드 스튜디오</h1>
-        <p>이미지에 문구를 얹어 카드를 만듭니다.</p>
+        <div>
+          <p className="brand-kicker">하나의 순간, 여러 개의 나</p>
+          <h1>또 다른 나</h1>
+          <p>사진과 문장을 시대의 감성으로 기록해 보세요.</p>
+        </div>
+        <span className="local-badge">● 내 브라우저에서만</span>
       </header>
 
       <p className="privacy-note">
-        고른 이미지는 브라우저 안에서만 처리하며 어디에도 전송하지 않습니다.
-        템플릿은 이 브라우저의 저장소에만 남습니다. 다른 사람에게 보일 수 있는
-        카드에는 이름·전화번호·주소 같은 개인정보를 넣지 마세요.
+        <strong>내 이미지는 내 브라우저에만.</strong>
+        {' '}업로드한 이미지는 외부로 전송되지 않고, 템플릿도 이 기기에만 저장됩니다.
+        공개할 카드에는 개인정보를 넣지 마세요.
       </p>
 
       <div aria-live="polite">
@@ -556,6 +546,7 @@ export default function App() {
           contrast={contrast}
           onApplySuggestedColor={applySuggestedColor}
           onUsePreset={usePreset}
+          onUseEra={useEra}
           onPickImage={pickImage}
           onClearImage={clearImage}
         />
@@ -563,11 +554,11 @@ export default function App() {
           ref={canvasRef}
           state={state}
           textArea={layout?.area ?? null}
+          layout={layout}
+          contrast={contrast}
           onChange={update}
           onMoveText={moveText}
           onDownload={handleDownload}
-          onDownloadAll={handleDownloadAll}
-          batchDownloading={batchDownloading}
           onCopyImage={copyImage}
           onShare={shareLink}
           canDownload={fontsReady}

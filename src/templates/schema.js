@@ -6,6 +6,8 @@ import {
   HEX_COLOR,
   normalizeHexColor,
   createInitialState,
+  PERSONA_KEYS,
+  ERA_KEYS,
 } from '../state/editorState.js';
 
 /**
@@ -142,6 +144,16 @@ export function validateTemplate(raw, index = 0) {
   if (raw.align !== undefined && !ALIGNS.includes(raw.align)) {
     return fail(`${where}의 'align' 값 '${raw.align}' 은(는) 지원하지 않습니다.`);
   }
+  // PROFESSIONAL을 사용하던 이전 버전의 JSON/공유 링크는 기본 Persona로 이관한다.
+  const persona = ['professional', 'chaotic'].includes(raw.persona)
+    ? 'normal'
+    : (raw.persona ?? base.persona);
+  if (!PERSONA_KEYS.includes(persona)) {
+    return fail(`${where}의 'persona' 값 '${raw.persona}' 은(는) 지원하지 않습니다.`);
+  }
+  if (raw.era !== undefined && !ERA_KEYS.includes(raw.era)) {
+    return fail(`${where}의 'era' 값 '${raw.era}' 은(는) 지원하지 않습니다.`);
+  }
   if (raw.transparentBg !== undefined && typeof raw.transparentBg !== 'boolean') {
     return fail(`${where}의 'transparentBg' 은(는) true 또는 false여야 합니다.`);
   }
@@ -180,6 +192,8 @@ export function validateTemplate(raw, index = 0) {
       transparentBg: raw.transparentBg ?? base.transparentBg,
       fit: raw.fit ?? base.fit,
       align: raw.align ?? base.align,
+      persona,
+      era: raw.era ?? base.era,
     },
   };
 }
@@ -242,6 +256,8 @@ export function templateFromState(state, name) {
     strokeColor: state.strokeColor,
     lineHeight: state.lineHeight,
     align: state.align,
+    persona: state.persona,
+    era: state.era,
   };
 }
 
@@ -262,5 +278,7 @@ export function stateFromTemplate(template, currentState) {
     strokeColor: template.strokeColor,
     lineHeight: template.lineHeight,
     align: template.align,
+    persona: template.persona,
+    era: template.era,
   };
 }

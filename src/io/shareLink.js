@@ -34,6 +34,8 @@ const SHARED_FIELDS = [
   'strokeColor',
   'lineHeight',
   'align',
+  'persona',
+  'era',
 ];
 
 /** 유니코드를 그대로 base64 로 바꾼다. btoa 는 라틴1 만 받으므로 UTF-8 로 먼저 바꾼다. */

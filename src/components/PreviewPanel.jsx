@@ -1,5 +1,6 @@
 import { forwardRef, useRef, useState } from 'react';
 import { RATIO_KEYS, getCanvasSize } from '../state/editorState.js';
+import { buildReadyChecks } from '../state/readyCheck.js';
 
 /**
  * 미리보기.
@@ -16,11 +17,11 @@ const PreviewPanel = forwardRef(function PreviewPanel(
   {
     state,
     textArea,
+    layout,
+    contrast,
     onChange,
     onMoveText,
     onDownload,
-    onDownloadAll,
-    batchDownloading,
     onCopyImage,
     onShare,
     canDownload,
@@ -36,6 +37,15 @@ const PreviewPanel = forwardRef(function PreviewPanel(
   const [grabbable, setGrabbable] = useState(false);
   // 커서 모양을 바꾸려면 리렌더가 필요하므로 ref 와 별개로 상태를 둔다.
   const [dragging, setDragging] = useState(false);
+  const [showSafeArea, setShowSafeArea] = useState(false);
+  const readyChecks = buildReadyChecks({
+    state,
+    layout,
+    contrast,
+    canExport: canDownload,
+    canvasHeight: size.height,
+  });
+  const warningCount = readyChecks.filter((item) => item.status === 'warn').length;
 
   /**
    * 화면 좌표를 0~1 정규화 좌표로 바꾼다. CSS 크기와 내부 해상도가 다르므로 비율로 계산한다.
@@ -118,7 +128,7 @@ const PreviewPanel = forwardRef(function PreviewPanel(
 
   return (
     <section className="panel panel-preview" aria-labelledby="preview-heading">
-      <h2 id="preview-heading">미리보기</h2>
+      <h2 id="preview-heading"><span>02</span> 결과 확인</h2>
 
       <div className="history-controls">
         <button
@@ -170,14 +180,6 @@ const PreviewPanel = forwardRef(function PreviewPanel(
           >
             이미지 다운로드
           </button>
-          <button
-            type="button"
-            onClick={onDownloadAll}
-            disabled={!canDownload || batchDownloading}
-            title="1:1, 4:5, 9:16 세 파일을 한 번에 내려받습니다"
-          >
-            {batchDownloading ? '내려받는 중…' : '세 비율 모두 저장'}
-          </button>
         </div>
       </div>
 
@@ -205,6 +207,11 @@ const PreviewPanel = forwardRef(function PreviewPanel(
             onPointerCancel={handlePointerEnd}
             onPointerLeave={() => setGrabbable(false)}
           />
+          {state.ratio === '9:16' && showSafeArea && (
+            <div className="safe-area-guide" aria-hidden="true">
+              <span>화면 버튼과 겹칠 수 있는 영역</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -214,6 +221,36 @@ const PreviewPanel = forwardRef(function PreviewPanel(
         <br />
         문구를 끌어서 옮길 수 있습니다. 왼쪽 슬라이더로도 조절됩니다.
       </p>
+
+      <aside className="ready-check" aria-labelledby="ready-check-heading">
+        <div className="ready-check-head">
+          <div>
+            <p className="ready-check-kicker">올리기 전에</p>
+            <h3 id="ready-check-heading">게시 전 확인</h3>
+          </div>
+          <span className={warningCount ? 'ready-summary warn' : 'ready-summary pass'}>
+            {warningCount ? `${warningCount}개 확인` : '준비 완료'}
+          </span>
+        </div>
+        <ul>
+          {readyChecks.map((check) => (
+            <li key={check.id} className={check.status}>
+              <span aria-hidden="true">{check.status === 'pass' ? '✓' : check.status === 'warn' ? '!' : '·'}</span>
+              {check.label}
+            </li>
+          ))}
+        </ul>
+        {state.ratio === '9:16' && (
+          <button
+            type="button"
+            className="small safe-area-toggle"
+            aria-pressed={showSafeArea}
+            onClick={() => setShowSafeArea((visible) => !visible)}
+          >
+            {showSafeArea ? '안전 영역 가이드 숨기기' : '안전 영역 가이드 보기'}
+          </button>
+        )}
+      </aside>
     </section>
   );
 });

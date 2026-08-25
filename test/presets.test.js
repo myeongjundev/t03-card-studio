@@ -11,29 +11,28 @@ const userState = () => ({
   imageName: 'my-photo.png',
 });
 
-test('프리셋은 문구·이미지·비율을 건드리지 않는다', () => {
+test('Persona 조합은 문구·이미지를 건드리지 않는다', () => {
   const before = userState();
   for (const preset of PRESETS) {
     const after = applyPreset(before, preset.id);
     assert.equal(after.text, before.text, `${preset.name}: 문구가 바뀌었다`);
-    assert.equal(after.ratio, before.ratio, `${preset.name}: 비율이 바뀌었다`);
     assert.equal(after.image, before.image, `${preset.name}: 이미지가 바뀌었다`);
     assert.equal(after.imageName, before.imageName, `${preset.name}: 이미지 이름이 바뀌었다`);
   }
 });
 
-test('프리셋은 실제로 보이는 방식을 바꾼다', () => {
+test('Persona는 실제로 보이는 방식을 바꾼다', () => {
   const before = userState();
-  for (const preset of PRESETS) {
+  for (const preset of PRESETS.filter((item) => item.id !== before.persona)) {
     const after = applyPreset(before, preset.id);
-    const changed = ['color', 'strokeWidth', 'fontSize', 'textY'].some(
+    const changed = ['persona', 'ratio', 'color', 'strokeWidth', 'fontSize', 'textY'].some(
       (key) => after[key] !== before[key]
     );
     assert.ok(changed, `${preset.name}: 아무것도 바뀌지 않았다`);
   }
 });
 
-test('모든 프리셋 값이 허용 범위 안에 있다', () => {
+test('모든 Persona 값이 허용 범위 안에 있다', () => {
   for (const preset of PRESETS) {
     const applied = applyPreset(createInitialState(), preset.id);
     const clamped = clampState(applied);
@@ -50,12 +49,22 @@ test('모든 프리셋 값이 허용 범위 안에 있다', () => {
   }
 });
 
-test('없는 프리셋을 넣으면 상태를 그대로 돌려준다', () => {
+test('없는 Persona를 넣으면 상태를 그대로 돌려준다', () => {
   const before = userState();
   assert.equal(applyPreset(before, '없는프리셋'), before);
 });
 
-test('프리셋 id 는 겹치지 않는다', () => {
+test('세 가지 모습의 id와 표시 메타데이터가 완전하다', () => {
   const ids = PRESETS.map((p) => p.id);
+  assert.deepEqual(ids, ['normal', 'social', 'close-friends']);
   assert.equal(new Set(ids).size, ids.length);
+  for (const persona of PRESETS) {
+    assert.ok(persona.name);
+    assert.ok(persona.koreanName);
+    assert.ok(persona.era);
+    assert.ok(persona.hint);
+    assert.ok(persona.layout);
+    assert.ok(persona.recommendedRatios.length >= 1);
+    assert.ok(persona.recommendedRatios.every((ratio) => ['1:1', '4:5', '9:16'].includes(ratio)));
+  }
 });

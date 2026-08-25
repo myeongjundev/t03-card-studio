@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { LIMITS, FITS, ALIGNS } from '../state/editorState.js';
-import { PRESETS } from '../state/presets.js';
+import { PRESETS, ERAS } from '../state/presets.js';
 
 const FIT_LABEL = { cover: '가득 채우기', contain: '전체 보이기' };
 const ALIGN_LABEL = { left: '왼쪽', center: '가운데', right: '오른쪽' };
@@ -33,6 +33,7 @@ export default function EditorPanel({
   onChange,
   onApplySuggestedColor,
   onUsePreset,
+  onUseEra,
   onPickImage,
   onClearImage,
 }) {
@@ -47,27 +48,58 @@ export default function EditorPanel({
 
   return (
     <section className="panel panel-editor" aria-labelledby="editor-heading">
-      <h2 id="editor-heading">편집</h2>
+      <h2 id="editor-heading"><span>01</span> 스타일 만들기</h2>
 
-      <div className="field">
-        <span className="field-label">스타일</span>
-        <div className="preset-grid">
+      <div className="field persona-picker">
+        <p className="persona-eyebrow">온라인에서 어떤 나인가요?</p>
+        <p className="persona-intro">지금 보여주고 싶은 모습을 골라보세요.</p>
+        <div className="preset-grid" aria-label="온라인에서 보여줄 모습">
           {PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
-              className="preset-button"
+              className={`preset-button persona-${preset.id}`}
               title={preset.hint}
+              aria-pressed={state.persona === preset.id}
+              aria-label={`${preset.name}, ${preset.koreanName}, ${preset.era}: ${preset.hint}`}
               onClick={() => onUsePreset(preset.id)}
             >
-              {preset.name}
+              <span className={`persona-silhouette ${preset.layout}`} aria-hidden="true">
+                <span />
+              </span>
+              <span className="persona-name">{preset.name}</span>
+              <span className="persona-korean">{preset.koreanName}</span>
+              <span className="persona-era">{preset.era}</span>
+              <span className="persona-hint">{preset.hint}</span>
+              <span className="persona-ratios">
+                추천 {preset.recommendedRatios.join(' · ')}
+              </span>
             </button>
           ))}
         </div>
         <p className="hint">
-          한 번 누르면 색·테두리·크기·위치가 함께 바뀝니다. 쓰던 문구와 이미지는
-          그대로 둡니다.
+          선택한 모습은 레이아웃과 추천 비율을 함께 적용합니다. 쓰던 문구와 이미지는
+          그대로 유지됩니다.
         </p>
+      </div>
+
+      <div className="field era-picker">
+        <p className="persona-eyebrow">어느 시대로 접속할까요?</p>
+        <p className="persona-intro">기억하고 싶은 인터넷 시대를 골라보세요.</p>
+        <div className="era-timeline" role="group" aria-label="인터넷 시대">
+          {ERAS.map((era) => (
+            <button
+              key={era.id}
+              type="button"
+              aria-pressed={state.era === era.id}
+              onClick={() => onUseEra(era.id)}
+            >
+              <span>{era.label}</span>
+              <small>{era.caption}</small>
+            </button>
+          ))}
+        </div>
+        <p className="hint">시대를 바꿔도 입력한 이미지와 문구는 그대로입니다.</p>
       </div>
 
       <div className="field">

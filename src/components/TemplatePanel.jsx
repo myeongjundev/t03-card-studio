@@ -25,7 +25,7 @@ export default function TemplatePanel({
 
   return (
     <section className="panel panel-templates" aria-labelledby="template-heading">
-      <h2 id="template-heading">템플릿</h2>
+      <h2 id="template-heading"><span>03</span> 저장하기</h2>
 
       <div className="field">
         <label htmlFor="template-name">템플릿 이름</label>
@@ -106,7 +106,7 @@ export default function TemplatePanel({
         </ul>
       )}
 
-      <h3 className="subheading">JSON 백업</h3>
+      <h3 className="subheading">설정 파일 백업</h3>
 
       <div className="button-row">
         <button
@@ -114,12 +114,12 @@ export default function TemplatePanel({
           onClick={onExportJson}
           disabled={templates.length === 0}
         >
-          JSON 내보내기
+          설정 내보내기
         </button>
       </div>
 
       <div className="field" style={{ marginTop: 10 }}>
-        <label htmlFor="json-input">JSON 가져오기</label>
+        <label htmlFor="json-input">설정 가져오기 (JSON)</label>
         <input
           id="json-input"
           type="file"

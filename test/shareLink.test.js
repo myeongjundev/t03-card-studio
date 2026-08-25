@@ -7,6 +7,7 @@ const BASE = 'https://example.test/app/';
 const SHARED_FIELDS = [
   'ratio', 'fit', 'bgColor', 'transparentBg', 'text',
   'textX', 'textY', 'fontSize', 'color', 'lineHeight', 'align',
+  'persona', 'era',
 ];
 
 const cardState = (patch = {}) => ({ ...createInitialState(), ...patch });
