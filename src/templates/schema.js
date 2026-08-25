@@ -144,12 +144,17 @@ export function validateTemplate(raw, index = 0) {
   if (raw.align !== undefined && !ALIGNS.includes(raw.align)) {
     return fail(`${where}의 'align' 값 '${raw.align}' 은(는) 지원하지 않습니다.`);
   }
-  // PROFESSIONAL을 사용하던 이전 버전의 JSON/공유 링크는 기본 Persona로 이관한다.
-  const persona = ['professional', 'chaotic'].includes(raw.persona)
-    ? 'normal'
-    : (raw.persona ?? base.persona);
-  if (!PERSONA_KEYS.includes(persona)) {
-    return fail(`${where}의 'persona' 값 '${raw.persona}' 은(는) 지원하지 않습니다.`);
+  // persona/era는 schemaVersion 1의 선택 필드다. 필드가 아예 없으면 기본값을 쓰고,
+  // 값이 들어 있으면 반드시 검사한다. era와 같은 규칙으로 맞춘 것인데,
+  // 전에는 persona만 `?? base`를 써서 null이 조용히 기본값으로 바뀌었다.
+  // 필드가 없는 것과 잘못 적힌 것은 다르게 다뤄야 한다.
+  let persona = base.persona;
+  if (raw.persona !== undefined) {
+    // PROFESSIONAL을 사용하던 이전 버전의 JSON/공유 링크는 기본 Persona로 이관한다.
+    persona = ['professional', 'chaotic'].includes(raw.persona) ? 'normal' : raw.persona;
+    if (!PERSONA_KEYS.includes(persona)) {
+      return fail(`${where}의 'persona' 값 '${raw.persona}' 은(는) 지원하지 않습니다.`);
+    }
   }
   if (raw.era !== undefined && !ERA_KEYS.includes(raw.era)) {
     return fail(`${where}의 'era' 값 '${raw.era}' 은(는) 지원하지 않습니다.`);

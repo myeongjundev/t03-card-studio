@@ -53,7 +53,7 @@ export default function EditorPanel({
       <div className="field persona-picker">
         <p className="persona-eyebrow">온라인에서 어떤 나인가요?</p>
         <p className="persona-intro">지금 보여주고 싶은 모습을 골라보세요.</p>
-        <div className="preset-grid" aria-label="온라인에서 보여줄 모습">
+        <div className="preset-grid" role="group" aria-label="온라인에서 보여줄 모습">
           {PRESETS.map((preset) => (
             <button
               key={preset.id}

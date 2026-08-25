@@ -1,4 +1,4 @@
-# T03 짤·카드 스튜디오 — 구현 설계
+# T03 또 다른 나 — 구현 설계
 
 구현 전에 확정한 데이터 흐름과 화면 구조. 코드를 쓰기 전에 여기서 결정을 끝내고,
 구현 중 설계를 바꿔야 하면 이 문서를 먼저 고친다.
@@ -55,18 +55,23 @@ EditorState ──────► │ renderCard(ctx, state)  │ ──► 1080
 
 ```js
 EditorState = {
-  ratio:      '1:1' | '4:5' | '9:16',
-  image:      HTMLImageElement | null,   // 저장 대상 아님 (런타임 전용)
-  imageName:  string,                    // 화면 표시용
-  fit:        'cover' | 'contain',
-  bgColor:    string,                    // contain 여백 / 이미지 없을 때 배경
-  text:       string,
-  textX:      number,   // 0 ~ 1
-  textY:      number,   // 0 ~ 1
-  fontSize:   number,   // 1080 기준 px
-  color:      string,
-  lineHeight: number,   // fontSize 배수
-  align:      'left' | 'center' | 'right',
+  ratio:         '1:1' | '4:5' | '9:16',
+  persona:       'normal' | 'social' | 'close-friends',   // 온라인에서 보여줄 모습
+  era:           '2004' | '2012' | '2026',                // 시대 문법
+  image:         HTMLImageElement | null,   // 저장 대상 아님 (런타임 전용)
+  imageName:     string,                    // 화면 표시용
+  fit:           'cover' | 'contain',
+  bgColor:       string,                    // contain 여백 / 이미지 없을 때 배경
+  transparentBg: boolean,                   // 켜면 배경도 장식도 그리지 않는다
+  text:          string,
+  textX:         number,   // 0 ~ 1
+  textY:         number,   // 0 ~ 1
+  fontSize:      number,   // 1080 기준 px. 요청값은 "최대치"이고 넘치면 자동으로 줄인다
+  color:         string,
+  strokeWidth:   number,   // fontSize 배수. 0 이면 외곽선 없음
+  strokeColor:   string,
+  lineHeight:    number,   // fontSize 배수
+  align:         'left' | 'center' | 'right',
 }
 ```
 
@@ -110,9 +115,19 @@ renderCard(ctx, state)
 
 1. 캔버스 크기를 비율에 맞게 설정 (변경된 경우에만 — `width` 대입은 캔버스를 초기화한다)
 2. `clearRect` 후 배경색 채우기 — **투명 PNG 테스트를 위해 배경을 투명으로 두는 옵션 필요**
-3. 이미지가 있으면 `fit` 계산에 따라 그리기
-4. 문구를 줄바꿈 계산 후 그리기
-5. 폰트는 그리기 전에 `document.fonts.ready`를 기다린다 (미로딩 폰트로 export 되는 문제 방지)
+3. 시대 장식 중 **사진 아래에 깔리는 것**(`'under'`) — 미니홈피 카드, 필름 베이스
+4. 이미지가 있으면 `fit` 계산에 따라 그리기
+5. 시대 장식 중 **사진 위에 얹히는 것**(`'over'`) — 비네팅, 날짜 각인, 하단 그라데이션
+6. 문구를 줄바꿈 계산 후 그리기
+7. 폰트는 그리기 전에 `document.fonts.ready`를 기다린다 (미로딩 폰트로 export 되는 문제 방지)
+
+장식을 3·5로 나눈 이유는 하나의 순서로는 둘 다 만족할 수 없기 때문이다. 필름
+베이스는 사진 아래에 있어야 하고 비네팅은 사진 위에 있어야 한다. 그래서
+`drawComposition(ctx, state, w, h, composition, layer)` 이 `layer` 를 받아
+같은 함수를 두 번 부른다.
+
+`transparentBg` 가 켜져 있으면 2·3·5 를 전부 건너뛴다. 장식이 불투명 픽셀을
+만들면 투명 PNG 를 기대한 사용자가 배경이 박힌 파일을 받는다.
 
 ### cover / contain 계산
 
@@ -393,14 +408,14 @@ textX, textY
 테두리다. 배경을 기준으로 재면 테두리 덕분에 잘 읽히는 글자를 두고
 "읽기 어려움" 이라고 잘못 경고하게 된다.
 
-### ALTER EGO Persona (`src/state/presets.js`)
+### 모습(Persona)과 시대(Era) (`src/state/presets.js`)
 
 슬라이더를 하나하나 맞춰 예쁘게 뽑는 사람은 많지 않다.
 `기본 / 소셜 / 친한 친구` 중 온라인에서 보여 줄
 자아를 고르면 그 Persona의 시각 언어를 한 번에 적용한다.
 
 Persona와 Era는 각각 atomic state update로 적용하며 History에서는 독립된 한
-단계가 된다. 핵심 조합은 색뿐 아니라 추천 비율, 이미지 프레임, 메타데이터,
+단계가 된다 (아래 되돌리기 절의 `isolateBurst` 참고). 핵심 조합은 색뿐 아니라 추천 비율, 이미지 프레임, 메타데이터,
 divider와 시각적 계층을 함께 바꾼다.
 
 - **문구와 이미지는 건드리지 않는다.** 눌렀더니 쓰던 문구가 사라지면 도구를
@@ -412,8 +427,25 @@ divider와 시각적 계층을 함께 바꾼다.
 메타데이터는 `renderCard`가 배경·이미지와 함께 동일한 미리보기 Canvas에 그린다.
 다운로드는 여전히 그 Canvas를 그대로 `toBlob()`하므로 별도 export renderer는 없다.
 
+시대 축은 연도 표기가 아니라 **감성**으로 정의했다. 처음에는 얇은 선과 작은
+글씨만 달라져서 세 시대가 사실상 구분되지 않았다.
+
+| 내부 키 | 감성 | 표현 |
+|---|---|---|
+| `2004` | 미니홈피 | 파스텔 카드, 이중 테두리, `MY HOME`, 방문자 카운터, 다이어리 점선, BGM 줄 |
+| `2012` | 필름 | 필름 베이스, 좌우 스프로킷 홀, `COLOR 400`, 비네팅, 주황색 날짜 각인 |
+| `2026` | 숏폼 | 하단 그라데이션, 자막 표기 |
+
+장식은 Persona가 아니라 **Era가 주도**한다. `persona:era` 조합마다 장식을 묶었을
+때는 9개 조합 중 5개가 시대 차이를 만들지 못했다. 시대의 정체성은 시대가 갖는다.
+
+내부 키는 `2004`/`2012`/`2026` 을 그대로 유지했다. 이미 저장된 템플릿과 이미
+공유된 링크가 이 값을 담고 있어서, 이름을 바꾸면 그 데이터가 열리지 않는다.
+
 `persona`와 `era`는 schemaVersion 1의 선택 필드다. 예전 JSON에는 필드가 없으므로
 기본 조합으로 복원되고, 새 템플릿과 공유 링크는 현재 조합을 함께 왕복한다.
+**필드가 없는 것과 잘못 적힌 것은 다르게 다룬다** — 없으면 기본값이지만, `null`
+처럼 값이 들어 있으면서 규칙에 맞지 않으면 이유를 밝히고 거부한다.
 
 ### 이미지 클립보드 복사 (`io/exportImage.js`)
 
@@ -449,6 +481,16 @@ Canvas 픽셀 기반 `contrast`, 폰트 준비 상태를 순수 함수에서 짧
 보고 새 단계를 만들지 않는다. 타이핑이나 슬라이더를 끄는 동안의 연속된 변경은
 한 번에 되돌려지고, 잠깐이라도 손을 뗐다가 다시 편집하면 그 시점부터 새
 묶음이 된다.
+
+묶음에는 예외가 하나 있다. Persona 와 Era 는 그 자체로 하나의 행동이라 시간과
+무관하게 독립된 단계가 되어야 한다. 처음에는 "마지막 변경 시각을 0으로 되돌린다"
+로 처리했는데, 그러면 **앞쪽만 끊기고 뒤쪽은 끊기지 않았다.** 모습을 고른 뒤
+0.6초 안에 문구를 옮기면 그 이동이 모습 단계에 흡수되어, 되돌리기 한 번에 둘이
+함께 사라졌다.
+
+그래서 시각 하나 대신 묶음 상태(`{ lastChangeAt, isolated }`)를 들고 다닌다.
+`isolateBurst` 로 표시된 변경은 앞의 편집과도 묶이지 않고, 자기 뒤에 시각을
+남기지 않아 뒤따르는 편집과도 묶이지 않는다.
 
 핵심 판단 로직(`recordChange`)은 시각(`now`)과 마지막 변경 시각을 인자로
 받는 순수 함수다. `setTimeout` 이나 DOM 에 의존하지 않아서 실제 타이밍 없이도

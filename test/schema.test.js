@@ -38,6 +38,21 @@ test('존재하는 선택 필드는 잘못된 타입이나 값을 거부한다',
   }
 });
 
+test('persona와 era는 없으면 기본값, null이면 거부한다 (같은 규칙)', () => {
+  // 필드가 아예 없는 예전 템플릿은 기본 조합으로 복원되어야 한다.
+  const missing = validateImportPayload(payload(validTemplate()));
+  assert.equal(missing.ok, true);
+  const base = createInitialState();
+  assert.equal(missing.templates[0].persona, base.persona);
+  assert.equal(missing.templates[0].era, base.era);
+
+  // null은 "적지 않은 것"이 아니라 "잘못 적은 것"이다. 두 필드 모두 같게 거부한다.
+  for (const patch of [{ persona: null }, { era: null }]) {
+    const result = validateImportPayload(payload(validTemplate(patch)));
+    assert.equal(result.ok, false, `${Object.keys(patch)[0]}: null 을 통과시켰다`);
+  }
+});
+
 test('3자리 색상은 color input과 호환되는 6자리로 정규화한다', () => {
   const result = validateImportPayload(
     payload(validTemplate({ color: '#fF0', bgColor: '#123' }))
