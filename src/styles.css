@@ -512,3 +512,19 @@ button.small { padding: 5px 10px; font-size: 13px; }
 }
 .history-controls button { color: var(--muted); }
 .history-controls button:not(:disabled):hover { color: var(--text); }
+
+/* ── 비율 추천 ────────────────────────────────────── */
+/* 비율은 사용자가 고른 값이다. 권하기만 하고 말없이 바꾸지 않는다. */
+.ratio-block { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ratio-suggestion {
+  padding: 3px 8px;
+  border: 1px dashed var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ratio-suggestion:hover { background: rgba(184, 255, 92, 0.12); }

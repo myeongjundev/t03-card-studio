@@ -1,6 +1,7 @@
 import { forwardRef, useRef, useState } from 'react';
 import { RATIO_KEYS, getCanvasSize } from '../state/editorState.js';
 import { buildReadyChecks } from '../state/readyCheck.js';
+import { getRecommendedRatio } from '../state/presets.js';
 
 /**
  * 미리보기.
@@ -33,6 +34,7 @@ const PreviewPanel = forwardRef(function PreviewPanel(
   canvasRef
 ) {
   const size = getCanvasSize(state.ratio);
+  const recommendedRatio = getRecommendedRatio(state.persona, state.era);
   const dragRef = useRef(null);
   const [grabbable, setGrabbable] = useState(false);
   // 커서 모양을 바꾸려면 리렌더가 필요하므로 ref 와 별개로 상태를 둔다.
@@ -152,17 +154,33 @@ const PreviewPanel = forwardRef(function PreviewPanel(
       </div>
 
       <div className="preview-head">
-        <div className="ratio-group segmented" role="group" aria-label="화면 비율">
-          {RATIO_KEYS.map((ratio) => (
+        <div className="ratio-block">
+          <div className="ratio-group segmented" role="group" aria-label="화면 비율">
+            {RATIO_KEYS.map((ratio) => (
+              <button
+                key={ratio}
+                type="button"
+                aria-pressed={state.ratio === ratio}
+                onClick={() => onChange({ ratio })}
+              >
+                {ratio}
+              </button>
+            ))}
+          </div>
+          {/*
+            지금 조합에 어울리는 비율을 권할 뿐, 말없이 바꾸지는 않는다.
+            비율은 사용자가 고른 값이다.
+          */}
+          {recommendedRatio && recommendedRatio !== state.ratio && (
             <button
-              key={ratio}
               type="button"
-              aria-pressed={state.ratio === ratio}
-              onClick={() => onChange({ ratio })}
+              className="ratio-suggestion"
+              onClick={() => onChange({ ratio: recommendedRatio })}
+              title={`${recommendedRatio} 로 바꿉니다. 문구와 이미지는 그대로 둡니다.`}
             >
-              {ratio}
+              이 조합엔 {recommendedRatio} 추천 · 적용
             </button>
-          ))}
+          )}
         </div>
 
         <div className="button-row">

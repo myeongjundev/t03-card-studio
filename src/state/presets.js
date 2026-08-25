@@ -1,5 +1,5 @@
 /**
- * ALTER EGO Persona 프리셋.
+ * 모습(Persona)과 시대(Era) 프리셋.
  *
  * 슬라이더를 하나하나 맞춰서 예쁘게 뽑는 사람은 많지 않다.
  * 한 번 눌러 "만든 것 같은" 결과가 나오게 하는 것이 목적이다.
@@ -11,8 +11,9 @@
  * 2. **템플릿 CRUD 를 대신하지 않는다.** 프리셋은 편집 화면의 시작점일 뿐이고,
  *    저장·수정·삭제는 사용자가 만든 템플릿이 그대로 담당한다. (원칙 5.2)
  *
- * 화면 비율도 바꾸지 않는다. 프리셋을 눌렀는데 캔버스 모양까지 변하면
- * 무엇이 바뀐 것인지 알기 어렵다.
+ * 3. **화면 비율은 바꾸지 않는다.** 프리셋을 눌렀는데 캔버스 모양까지 변하면
+ *    무엇이 바뀐 것인지 알기 어렵다. 어울리는 비율은 `getRecommendedRatio` 로
+ *    화면에 보여 주기만 하고, 적용 여부는 사용자가 정한다.
  */
 
 export const PRESETS = [
@@ -86,30 +87,36 @@ export const ERAS = [
   { id: '2026', label: '2026', caption: '숏폼 · 썸네일' },
 ];
 
-/** 시연의 핵심 6개 조합. 지정하지 않은 조합은 Persona 기본 스타일을 쓴다. */
+/**
+ * 시연의 핵심 조합. 지정하지 않은 조합은 Persona 기본 스타일을 쓴다.
+ *
+ * `recommendedRatio` 는 **적용하지 않고 화면에 보여 주기만 한다.** 비율은
+ * 사용자가 고른 값이고, 모습이나 시대를 눌렀다고 해서 캔버스 모양이 말없이
+ * 바뀌면 방금 무엇이 바뀐 것인지 알기 어렵다.
+ */
 export const COMBINATION_STYLES = {
   'close-friends:2004': {
-    ratio: '1:1', fit: 'cover', bgColor: '#dfe8ed', color: '#303b55',
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#dfe8ed', color: '#303b55',
     strokeColor: '#ffffff', strokeWidth: 0.025, fontSize: 82,
     lineHeight: 1.45, align: 'left', textX: 0.12, textY: 0.81,
   },
   'normal:2012': {
-    ratio: '1:1', fit: 'cover', bgColor: '#eef1f4', color: '#172033',
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#eef1f4', color: '#172033',
     strokeColor: '#ffffff', strokeWidth: 0, fontSize: 92,
     lineHeight: 1.35, align: 'left', textX: 0.1, textY: 0.76,
   },
   'normal:2026': {
-    ratio: '1:1', fit: 'cover', bgColor: '#26334a', color: '#ffffff',
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#26334a', color: '#ffffff',
     strokeColor: '#111111', strokeWidth: 0.065, fontSize: 140,
     lineHeight: 1.25, align: 'center', textX: 0.5, textY: 0.5,
   },
   'social:2026': {
-    ratio: '9:16', fit: 'cover', bgColor: '#9f3d55', color: '#ffffff',
+    recommendedRatio: '9:16', fit: 'cover', bgColor: '#9f3d55', color: '#ffffff',
     strokeColor: '#171319', strokeWidth: 0.075, fontSize: 148,
     lineHeight: 1.08, align: 'center', textX: 0.5, textY: 0.7,
   },
   'close-friends:2026': {
-    ratio: '9:16', fit: 'cover', bgColor: '#42574b', color: '#ffffff',
+    recommendedRatio: '9:16', fit: 'cover', bgColor: '#42574b', color: '#ffffff',
     strokeColor: '#151a17', strokeWidth: 0.06, fontSize: 108,
     lineHeight: 1.25, align: 'left', textX: 0.1, textY: 0.76,
   },
@@ -118,8 +125,24 @@ export const COMBINATION_STYLES = {
 export function applyIdentity(state, personaId, eraId) {
   const preset = PRESETS.find((item) => item.id === personaId);
   if (!preset || !ERA_KEYS.includes(eraId)) return state;
-  const combination = COMBINATION_STYLES[`${personaId}:${eraId}`] ?? preset.style;
+  // 비율 관련 키는 꺼내서 버린다. 이 함수는 비율을 절대 쓰지 않는다.
+  // recommendedRatio 뿐 아니라 ratio 까지 떼어 내는 이유는, 나중에 조합을
+  // 추가하는 사람이 습관적으로 ratio 를 적더라도 조용히 새어 나가지 않게
+  // 하기 위해서다.
+  const { recommendedRatio, ratio, ...combination } =
+    COMBINATION_STYLES[`${personaId}:${eraId}`] ?? preset.style;
   return { ...state, ...combination, persona: personaId, era: eraId };
+}
+
+/**
+ * 지금 조합에 어울리는 비율. 적용은 하지 않고 추천만 한다.
+ * 조합에 지정이 없으면 Persona 의 첫 번째 추천 비율을 쓴다.
+ */
+export function getRecommendedRatio(personaId, eraId) {
+  const combination = COMBINATION_STYLES[`${personaId}:${eraId}`];
+  if (combination?.recommendedRatio) return combination.recommendedRatio;
+  const preset = PRESETS.find((item) => item.id === personaId);
+  return preset?.recommendedRatios[0] ?? null;
 }
 
 /** Persona를 현재 Era와 조합해 한 번의 상태 변경으로 적용한다. */
