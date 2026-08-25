@@ -40,6 +40,7 @@ const PreviewPanel = forwardRef(function PreviewPanel(
   // 커서 모양을 바꾸려면 리렌더가 필요하므로 ref 와 별개로 상태를 둔다.
   const [dragging, setDragging] = useState(false);
   const [showSafeArea, setShowSafeArea] = useState(false);
+  const [mobileDocked, setMobileDocked] = useState(false);
   const readyChecks = buildReadyChecks({
     state,
     layout,
@@ -144,7 +145,10 @@ const PreviewPanel = forwardRef(function PreviewPanel(
   };
 
   return (
-    <section className="panel panel-preview" aria-labelledby="preview-heading">
+    <section
+      className={`panel panel-preview${mobileDocked ? ' is-mobile-docked' : ''}`}
+      aria-labelledby="preview-heading"
+    >
       <h2 id="preview-heading"><span>02</span> 결과 확인</h2>
 
       <div className="history-controls">
@@ -165,6 +169,14 @@ const PreviewPanel = forwardRef(function PreviewPanel(
           title="다시 실행 (Ctrl+Shift+Z)"
         >
           ↪ 다시 실행
+        </button>
+        <button
+          type="button"
+          className="small mobile-dock-toggle"
+          aria-pressed={mobileDocked}
+          onClick={() => setMobileDocked((docked) => !docked)}
+        >
+          {mobileDocked ? '큰 미리보기' : '편집하며 보기'}
         </button>
       </div>
 
@@ -217,6 +229,16 @@ const PreviewPanel = forwardRef(function PreviewPanel(
       </div>
 
       <div className="canvas-stage">
+        {mobileDocked && (
+          <button
+            type="button"
+            className="dock-restore"
+            onClick={() => setMobileDocked(false)}
+            aria-label="큰 미리보기로 돌아가기"
+          >
+            크게
+          </button>
+        )}
         <div
           className="canvas-frame"
           style={{ width: `min(100%, ${(size.width / size.height) * 62}vh)` }}
@@ -231,6 +253,7 @@ const PreviewPanel = forwardRef(function PreviewPanel(
             role="img"
             aria-label={previewLabel}
             aria-describedby="preview-description ready-check-list"
+            data-image-cache={layout?.imageCache ?? undefined}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerEnd}

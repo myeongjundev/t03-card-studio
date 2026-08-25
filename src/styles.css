@@ -303,6 +303,36 @@ button.small { padding: 5px 10px; font-size: 13px; }
 
 .hint { margin: 8px 0 0; color: var(--muted); font-size: 12.5px; }
 
+.quick-start-guide {
+  display: block;
+  margin-bottom: 14px;
+  padding: 13px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: rgba(255, 192, 120, 0.07);
+}
+.quick-start-kicker { margin: 0; color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: 0.12em; }
+.quick-start-title { margin: 2px 0 0; color: var(--text); font-size: 12px; font-weight: 700; }
+.quick-start-guide ol { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin: 10px 0 0; padding: 0; list-style: none; }
+.quick-start-guide li { color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.quick-start-guide li span,
+.step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.mobile-dock-toggle,
+.dock-restore { display: none; }
+
 @media (max-width: 1100px) {
   .layout { grid-template-columns: 1fr; }
   /* 좁은 화면에서는 결과를 먼저 보여 줘 긴 편집 패널을 왕복하지 않게 한다. */
@@ -310,6 +340,31 @@ button.small { padding: 5px 10px; font-size: 13px; }
   .panel-editor { order: 2; }
   .panel-templates { order: 3; }
   .canvas-frame canvas { max-height: none; }
+  .mobile-dock-toggle { display: inline-flex; margin-left: auto; }
+
+  .panel-preview.is-mobile-docked .canvas-stage {
+    position: fixed;
+    z-index: 20;
+    right: 12px;
+    bottom: 12px;
+    width: 148px;
+    padding: 6px;
+    border-color: var(--accent);
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.55);
+  }
+  .panel-preview.is-mobile-docked .canvas-frame { width: 100% !important; }
+  .panel-preview.is-mobile-docked .dock-restore {
+    display: block;
+    position: absolute;
+    z-index: 3;
+    top: 8px;
+    right: 8px;
+    padding: 3px 6px;
+    border-color: rgba(255, 255, 255, 0.65);
+    background: rgba(20, 18, 16, 0.86);
+    color: #fff;
+    font-size: 10px;
+  }
 }
 
 /* ── 템플릿 ───────────────────────────────────────── */
@@ -530,6 +585,15 @@ button.small { padding: 5px 10px; font-size: 13px; }
   .preview-head .button-row { width: 100%; }
   .preview-head .button-row button { flex: 1 1 auto; }
   .ready-check ul { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 @media (min-width: 1101px) {

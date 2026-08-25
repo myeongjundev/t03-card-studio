@@ -67,8 +67,20 @@ export default function EditorPanel({
     <section className="panel panel-editor" aria-labelledby="editor-heading">
       <h2 id="editor-heading"><span>01</span> 스타일 만들기</h2>
 
+      <div className="quick-start-guide" aria-label="30초 빠른 시작">
+        <div>
+          <p className="quick-start-kicker">30초 빠른 시작</p>
+          <p className="quick-start-title">세 가지만 바꾸면 카드가 완성됩니다.</p>
+        </div>
+        <ol>
+          <li><span>1</span> 모습</li>
+          <li><span>2</span> 시대</li>
+          <li><span>3</span> 내 사진</li>
+        </ol>
+      </div>
+
       <div className="field persona-picker">
-        <p className="persona-eyebrow">온라인에서 어떤 나인가요?</p>
+        <p className="persona-eyebrow"><span className="step-number">1</span> 온라인에서 어떤 나인가요?</p>
         <p className="persona-intro">지금 보여주고 싶은 모습을 골라보세요.</p>
         <div className="preset-grid" role="group" aria-label="온라인에서 보여줄 모습">
           {PRESETS.map((preset) => (
@@ -103,7 +115,7 @@ export default function EditorPanel({
       </div>
 
       <div className="field era-picker">
-        <p className="persona-eyebrow">어느 시대로 접속할까요?</p>
+        <p className="persona-eyebrow"><span className="step-number">2</span> 어느 시대로 접속할까요?</p>
         <p className="persona-intro">기억하고 싶은 인터넷 시대를 골라보세요.</p>
         <div className="era-timeline" role="group" aria-label="인터넷 시대">
           {ERAS.map((era) => (
@@ -122,7 +134,7 @@ export default function EditorPanel({
       </div>
 
       <div className="field">
-        <span className="field-label">배경 이미지</span>
+        <span className="field-label"><span className="step-number">3</span> 내 사진으로 바꾸기</span>
         <DropZone
           accept="image/png,image/jpeg"
           onFile={onPickImage}

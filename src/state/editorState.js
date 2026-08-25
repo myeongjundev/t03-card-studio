@@ -1,3 +1,5 @@
+import { ERA_KEYS } from './eras.js';
+
 /**
  * 편집 상태의 단일 진실 원천.
  *
@@ -20,7 +22,7 @@ export const RATIO_KEYS = Object.keys(RATIOS);
 export const FITS = ['cover', 'contain'];
 export const ALIGNS = ['left', 'center', 'right'];
 export const PERSONA_KEYS = ['normal', 'social', 'close-friends'];
-export const ERA_KEYS = ['2004', '2012', '2026'];
+export { ERA_KEYS } from './eras.js';
 
 /** 값 범위. JSON 가져오기 검증(src/templates/schema.js)에서도 같은 상수를 쓴다. */
 export const LIMITS = {

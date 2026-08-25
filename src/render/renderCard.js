@@ -58,6 +58,19 @@ function seededRandom(seed) {
 // 네모 화소가 도드라지기보다 전체가 부드럽게 뭉개져 있었다. 그래서 버퍼를
 // 아주 작게 잡지 않고, 되돌릴 때 보간도 켠 채로 둔다.
 const PHONE_BUFFER_WIDTH = 300;
+let phoneFrameCache = new WeakMap();
+let phoneCacheHits = 0;
+let phoneCacheMisses = 0;
+
+export function getRenderCacheStats() {
+  return { hits: phoneCacheHits, misses: phoneCacheMisses };
+}
+
+export function resetRenderCache() {
+  phoneFrameCache = new WeakMap();
+  phoneCacheHits = 0;
+  phoneCacheMisses = 0;
+}
 
 /**
  * 피처폰·캠코더 사진의 화질을 만든다.
@@ -82,8 +95,16 @@ function featurePhoneFrame(image, imageBox, fit) {
     1,
     Math.round(bufferWidth * (imageBox.height / imageBox.width))
   );
+  const cacheKey = `${fit}:${bufferWidth}x${bufferHeight}`;
+  const cached = phoneFrameCache.get(image)?.get(cacheKey);
+  if (cached) {
+    phoneCacheHits += 1;
+    return cached;
+  }
+
   const placed = fitImage(image, bufferWidth, bufferHeight, fit);
   if (!placed) return null;
+  phoneCacheMisses += 1;
 
   const canvas = new OffscreenCanvas(bufferWidth, bufferHeight);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -116,6 +137,9 @@ function featurePhoneFrame(image, imageBox, fit) {
   }
 
   ctx.putImageData(frame, 0, 0);
+  const variants = phoneFrameCache.get(image) ?? new Map();
+  variants.set(cacheKey, canvas);
+  phoneFrameCache.set(image, variants);
   return canvas;
 }
 
@@ -636,9 +660,9 @@ function drawComposition(ctx, state, width, height, composition, layer) {
   if (state.transparentBg) return;
 
   ctx.save();
-  if (composition.era === '2004') {
+  if (composition.definition.renderKind === 'minihompy') {
     drawMinihompy(ctx, width, height, composition.imageBox, layer, state.persona, Boolean(state.image));
-  } else if (composition.era === '2012') {
+  } else if (composition.definition.renderKind === 'film') {
     drawFilm(ctx, width, height, composition.imageBox, layer, composition.era);
   } else {
     drawShortForm(ctx, width, height, state.persona, layer);
@@ -836,6 +860,7 @@ function drawText(ctx, state, width, height, textBox = null) {
  *   실제로 그린 결과. fontSize 는 자동 축소가 적용된 뒤의 값이다.
  */
 export function renderCard(ctx, state, width, height) {
+  const cacheBefore = getRenderCacheStats();
   const composition = getComposition(state, width, height);
 
   drawBackground(ctx, state, width, height);
@@ -847,5 +872,21 @@ export function renderCard(ctx, state, width, height) {
 
   // 투명 배경은 시대 장식뿐 아니라 그 장식이 강제하는 문구 칸도 제거한다.
   // 그래야 투명 PNG가 시대와 무관한 순수 문구 레이어로 남는다.
-  return drawText(ctx, state, width, height, state.transparentBg ? null : composition.textBox);
+  const result = drawText(
+    ctx,
+    state,
+    width,
+    height,
+    state.transparentBg ? null : composition.textBox
+  );
+  const cacheAfter = getRenderCacheStats();
+  return {
+    ...result,
+    imageCache:
+      cacheAfter.hits > cacheBefore.hits
+        ? 'hit'
+        : cacheAfter.misses > cacheBefore.misses
+          ? 'miss'
+          : null,
+  };
 }

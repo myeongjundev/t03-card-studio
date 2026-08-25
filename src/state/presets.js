@@ -1,3 +1,5 @@
+import { ERA_DEFINITIONS, ERA_KEYS } from './eras.js';
+
 /**
  * 모습(Persona)과 시대(Era) 프리셋.
  *
@@ -79,13 +81,8 @@ export const PRESETS = [
   },
 ];
 
-export const ERA_KEYS = ['2004', '2012', '2026'];
-
-export const ERAS = [
-  { id: '2004', label: '2004', caption: '개인 홈 · 메신저' },
-  { id: '2012', label: '2012', caption: '프로필 · 피드' },
-  { id: '2026', label: '2026', caption: '숏폼 · 썸네일' },
-];
+export { ERA_KEYS } from './eras.js';
+export const ERAS = ERA_DEFINITIONS;
 
 /**
  * 시연의 핵심 조합. 지정하지 않은 조합은 Persona 기본 스타일을 쓴다.

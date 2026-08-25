@@ -313,6 +313,15 @@ test('2004 는 사진을 그 시절 화질로 바꾼다', async () => {
   await page.waitForTimeout(150);
   const again = await exportedPng();
   assert.equal(again.hash, agedPng.hash, '같은 설정인데 다시 그린 결과가 다르다');
+
+  // 문구만 바꿀 때 무거운 2004 이미지 보정을 다시 하지 않아야 한다.
+  await page.locator('#text-input').fill('캐시를 쓰는 문구');
+  await page.waitForTimeout(150);
+  assert.equal(
+    await page.locator('canvas').getAttribute('data-image-cache'),
+    'hit',
+    '문구 변경이 2004 이미지 보정을 다시 계산했다'
+  );
 });
 
 test('이미지를 끌어다 놓으면 실제로 불러온다', async () => {
@@ -386,6 +395,21 @@ test('좁은 화면에서 가로 스크롤이 생기지 않는다', async () => 
     assert.ok(result.canvasBottom <= 812, `첫 화면에서 미리보기가 보이지 않는다: ${result.canvasBottom}px`);
     assert.match(result.canvasLabel, /1:1.*기본 모습.*2026 시대.*배경 이미지 없음.*오늘도 무사히/, 'Canvas 설명에 결과 정보가 빠졌다');
     assert.equal(result.canvasDescribedBy, 'preview-description ready-check-list');
+    assert.equal(await narrow.getByText('30초 빠른 시작').count(), 1, '빠른 시작 안내가 없다');
+
+    const dockToggle = narrow.getByRole('button', { name: '편집하며 보기' });
+    await dockToggle.click();
+    await narrow.locator('.panel-editor').scrollIntoViewIfNeeded();
+    const dock = await narrow.locator('.canvas-stage').evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        position: getComputedStyle(el).position,
+        visible: rect.bottom <= innerHeight && rect.right <= innerWidth,
+      };
+    });
+    assert.equal(dock.position, 'fixed', '편집 중 미리보기가 화면에 고정되지 않았다');
+    assert.equal(dock.visible, true, '고정 미리보기가 화면 밖으로 나갔다');
+    await narrow.getByRole('button', { name: '큰 미리보기로 돌아가기' }).click();
   } finally {
     await narrow.close();
   }

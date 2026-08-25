@@ -632,3 +632,39 @@ state 변경 경로가 여러 곳(`update`, 이미지 선택, 프리셋 적용, 
 각각 별도 단계로 나뉘고, 45ms 안에 이어진 5번의 연속 변경은 한 번의
 되돌리기로 시작 상태까지 한 번에 돌아갔다. 이미지 업로드도 되돌리기 대상이며,
 되돌린 뒤에도 미리보기와 다운로드 파일의 픽셀 차이는 0 이었다.
+
+---
+
+## 16. 시대 정의와 이미지 레이어 캐시
+
+시대 축의 허용값, UI 문구, 이미지 영역, 문구 영역, 렌더 종류를
+`src/state/eras.js`의 `ERA_DEFINITIONS` 한 곳에 둔다. 실제 Canvas 그리기 함수는
+`renderCard.js`에 남긴다. 정의 파일에 함수까지 넣으면 렌더 레이어 순서가 여러
+모듈로 흩어지기 때문이다.
+
+```text
+ERA_DEFINITIONS
+  ├─ UI: label, caption
+  ├─ layout: imageBox, textBox
+  └─ renderer: renderKind, imageTreatment
+                    ↓
+renderCard: under → image → over → persona → text
+```
+
+2004 사진 보정은 이미지, 맞춤 방식, 보정 버퍼 크기가 같으면 결과도 같다.
+문구·색·위치만 바뀌었는데 `getImageData`와 픽셀 순회를 반복할 이유가 없으므로
+`WeakMap<HTMLImageElement, Map<variant, OffscreenCanvas>>`에 보정 결과를 둔다.
+이미지 객체가 더 이상 쓰이지 않으면 WeakMap 항목도 함께 수거된다.
+
+캐시는 미리보기와 내보내기 불변식을 바꾸지 않는다. 캐시된 것은 중간 이미지
+레이어이고, 최종 결과는 여전히 단 하나의 Canvas에 동기로 합성한 뒤 그 Canvas를
+그대로 `toBlob()` 한다.
+
+## 17. 모바일 편집 미리보기
+
+좁은 화면에서는 결과 패널을 먼저 보여 준다. 사용자가 `편집하며 보기`를 누르면
+같은 Canvas DOM 요소가 148px 플로팅 미리보기로 바뀐다. 두 번째 Canvas나 별도
+렌더러를 만들지 않으므로 화면과 PNG가 갈라질 경로가 생기지 않는다.
+
+첫 편집 화면에는 `모습 → 시대 → 내 사진`의 30초 빠른 시작 순서를 표시한다.
+세부 슬라이더는 그대로 유지하되 첫 방문자가 무엇부터 해야 하는지 먼저 말한다.
