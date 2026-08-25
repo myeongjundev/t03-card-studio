@@ -372,11 +372,20 @@ test('좁은 화면에서 가로 스크롤이 생기지 않는다', async () => 
       return {
         scrolls: document.documentElement.scrollWidth > docWidth,
         overflowing: [...new Set(overflowing)],
+        previewTop: document.querySelector('.panel-preview')?.getBoundingClientRect().top ?? Infinity,
+        editorTop: document.querySelector('.panel-editor')?.getBoundingClientRect().top ?? Infinity,
+        canvasBottom: document.querySelector('canvas')?.getBoundingClientRect().bottom ?? Infinity,
+        canvasLabel: document.querySelector('canvas')?.getAttribute('aria-label') ?? '',
+        canvasDescribedBy: document.querySelector('canvas')?.getAttribute('aria-describedby') ?? '',
       };
     });
 
     assert.deepEqual(result.overflowing, [], '화면 밖으로 나간 요소가 있다');
     assert.equal(result.scrolls, false, '가로 스크롤이 생겼다');
+    assert.ok(result.previewTop < result.editorTop, '모바일에서 미리보기가 편집기보다 뒤에 있다');
+    assert.ok(result.canvasBottom <= 812, `첫 화면에서 미리보기가 보이지 않는다: ${result.canvasBottom}px`);
+    assert.match(result.canvasLabel, /1:1.*기본 모습.*2026 시대.*배경 이미지 없음.*오늘도 무사히/, 'Canvas 설명에 결과 정보가 빠졌다');
+    assert.equal(result.canvasDescribedBy, 'preview-description ready-check-list');
   } finally {
     await narrow.close();
   }

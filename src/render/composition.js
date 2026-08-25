@@ -21,22 +21,38 @@ const IMAGE_BOX_BY_ERA = {
   2004: { x: 0.13, y: 0.25, width: 0.74, height: 0.36 },
 };
 
+/**
+ * 시대 장식 안에서 사용자 문구가 들어갈 수 있는 영역.
+ *
+ * 2004 미니홈피는 사진 아래의 다이어리 칸만 사용자 문구 자리다. Canvas 전체를
+ * 쓰게 두면 긴 문구가 기분 표시와 BGM을 덮는다. 다른 시대는 별도 제한 없이
+ * 기존 Canvas 안전 여백을 그대로 쓴다.
+ */
+const TEXT_BOX_BY_ERA = {
+  2004: { x: 0.13, y: 0.7, width: 0.74, height: 0.16 },
+};
+
+const scaleBox = (ratios, width, height) => ({
+  x: width * ratios.x,
+  y: height * ratios.y,
+  width: width * ratios.width,
+  height: height * ratios.height,
+});
+
 export function getComposition(state, width, height) {
   const era = state.era;
   const key = `${state.persona}:${era}`;
   const ratios = IMAGE_BOX_BY_ERA[era];
+  const textRatios = TEXT_BOX_BY_ERA[era];
+  const textBox = textRatios ? scaleBox(textRatios, width, height) : null;
 
-  if (!ratios) return { key, era, imageBox: full(width, height) };
+  if (!ratios) return { key, era, imageBox: full(width, height), textBox };
 
   return {
     key,
     era,
-    imageBox: {
-      x: width * ratios.x,
-      y: height * ratios.y,
-      width: width * ratios.width,
-      height: height * ratios.height,
-    },
+    imageBox: scaleBox(ratios, width, height),
+    textBox,
   };
 }
 

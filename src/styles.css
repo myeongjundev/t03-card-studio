@@ -305,9 +305,9 @@ button.small { padding: 5px 10px; font-size: 13px; }
 
 @media (max-width: 1100px) {
   .layout { grid-template-columns: 1fr; }
-  /* 좁은 화면에서는 미리보기를 편집 영역 바로 아래로 올린다. */
-  .panel-editor { order: 1; }
-  .panel-preview { order: 2; }
+  /* 좁은 화면에서는 결과를 먼저 보여 줘 긴 편집 패널을 왕복하지 않게 한다. */
+  .panel-preview { order: 1; }
+  .panel-editor { order: 2; }
   .panel-templates { order: 3; }
   .canvas-frame canvas { max-height: none; }
 }

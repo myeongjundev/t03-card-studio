@@ -48,6 +48,21 @@ const PreviewPanel = forwardRef(function PreviewPanel(
     canvasHeight: size.height,
   });
   const warningCount = readyChecks.filter((item) => item.status === 'warn').length;
+  const personaLabel = {
+    normal: '기본',
+    social: '소셜',
+    'close-friends': '친한 친구',
+  }[state.persona] ?? state.persona;
+  const previewLabel = [
+    `카드 미리보기, ${state.ratio}`,
+    `${personaLabel} 모습`,
+    `${state.era} 시대`,
+    state.image ? '배경 이미지 있음' : '배경 이미지 없음',
+    state.text.trim() ? `문구: ${state.text.replace(/\n/g, ' ')}` : '문구 없음',
+    layout?.shrunk
+      ? `문구가 ${layout.fontSize < 10 ? layout.fontSize.toFixed(1) : Math.round(layout.fontSize)}픽셀로 자동 축소됨`
+      : null,
+  ].filter(Boolean).join('. ');
 
   /**
    * 화면 좌표를 0~1 정규화 좌표로 바꾼다. CSS 크기와 내부 해상도가 다르므로 비율로 계산한다.
@@ -214,11 +229,8 @@ const PreviewPanel = forwardRef(function PreviewPanel(
             width={size.width}
             height={size.height}
             role="img"
-            aria-label={
-              state.text.trim()
-                ? `미리보기: ${state.text.replace(/\n/g, ' ')}`
-                : '미리보기: 문구 없음'
-            }
+            aria-label={previewLabel}
+            aria-describedby="preview-description ready-check-list"
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerEnd}
@@ -233,7 +245,7 @@ const PreviewPanel = forwardRef(function PreviewPanel(
         </div>
       </div>
 
-      <p className="preview-meta">
+      <p className="preview-meta" id="preview-description">
         출력 크기 {size.width} × {size.height}px · 화면에 보이는 그림과 내려받는
         파일은 같은 캔버스입니다.
         <br />
@@ -250,7 +262,7 @@ const PreviewPanel = forwardRef(function PreviewPanel(
             {warningCount ? `${warningCount}개 확인` : '준비 완료'}
           </span>
         </div>
-        <ul>
+        <ul id="ready-check-list">
           {readyChecks.map((check) => (
             <li key={check.id} className={check.status}>
               <span aria-hidden="true">{check.status === 'pass' ? '✓' : check.status === 'warn' ? '!' : '·'}</span>

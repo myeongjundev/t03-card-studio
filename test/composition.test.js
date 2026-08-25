@@ -37,3 +37,23 @@ test('미니홈피만 사진첩 칸을 만들고 나머지는 화면 전체를 �
     }
   }
 });
+
+test('2004 문구 영역은 기분 표시와 BGM 사이의 다이어리 칸이다', () => {
+  const { textBox } = getComposition({ persona: 'close-friends', era: '2004' }, 1080, 1080);
+
+  assert.deepEqual(textBox, {
+    x: 140.4,
+    y: 756,
+    width: 799.2,
+    height: 172.8,
+  });
+  assert.equal(isBoxInsideCanvas(textBox, 1080, 1080), true);
+  assert.ok(textBox.y > 1080 * 0.68, '기분 표시 아래에서 시작해야 한다');
+  assert.ok(textBox.y + textBox.height < 1080 * 0.9, 'BGM 위에서 끝나야 한다');
+});
+
+test('2012와 2026은 별도 문구 영역을 강제하지 않는다', () => {
+  for (const era of ['2012', '2026']) {
+    assert.equal(getComposition({ persona: 'normal', era }, 1080, 1080).textBox, null);
+  }
+});

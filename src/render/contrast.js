@@ -128,13 +128,17 @@ export function checkTextContrast(ctx, area, textColor, fontSize, stroke = null)
     const strokeRgb = hexToRgb(stroke.color);
     if (strokeRgb) {
       const ratio = contrastRatio(textLuminanceOf, relativeLuminance(...strokeRgb));
-      return {
-        ratio,
-        required,
-        passes: ratio >= required,
-        basis: 'stroke',
-        suggestion: suggestTextColor(relativeLuminance(...strokeRgb)),
-      };
+      // 글자와 테두리가 충분히 구분될 때만 테두리를 실제 경계로 본다.
+      // 둘이 같거나 비슷하면 한 덩어리의 글자 모양이므로 바깥 배경과 비교한다.
+      if (ratio >= required) {
+        return {
+          ratio,
+          required,
+          passes: true,
+          basis: 'stroke',
+          suggestion: suggestTextColor(relativeLuminance(...strokeRgb)),
+        };
+      }
     }
   }
 

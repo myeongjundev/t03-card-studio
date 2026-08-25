@@ -94,3 +94,18 @@ test('외곽선이 있으면 배경이 아니라 테두리를 기준으로 판�
   assert.equal(withoutStroke.basis, 'background');
   assert.equal(withoutStroke.passes, false);
 });
+
+test('글자와 외곽선 색이 같으면 실제 배경을 기준으로 판정한다', () => {
+  const ctx = {
+    getImageData: () => solid([0, 0, 0]),
+  };
+  const area = { x: 0, y: 0, width: 10, height: 10 };
+  const result = checkTextContrast(ctx, area, '#ffffff', 140, {
+    color: '#ffffff',
+    width: 8,
+  });
+
+  assert.equal(result.basis, 'background');
+  assert.equal(result.passes, true);
+  assert.equal(result.ratio, 21);
+});

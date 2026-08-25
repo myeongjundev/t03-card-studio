@@ -35,6 +35,22 @@ test('허용된 최악의 수동 개행도 90% 높이 안에 맞춘다', () => {
   assert.ok(blockHeight <= 1080 * 0.9);
 });
 
+test('시대별 문구 영역이 있으면 그 높이에 맞춰 더 작게 줄인다', () => {
+  const ctx = contextMock();
+  const state = {
+    text: '첫 줄\n둘째 줄\n셋째 줄',
+    fontSize: 120,
+    lineHeight: 1.4,
+  };
+  const textBox = { x: 140.4, y: 756, width: 799.2, height: 172.8 };
+  const result = layoutText(ctx, state, 1080, 1080, textBox);
+  const blockHeight =
+    (result.lines.length - 1) * result.fontSize * state.lineHeight + result.fontSize;
+
+  assert.ok(result.fontSize < state.fontSize);
+  assert.ok(blockHeight <= textBox.height);
+});
+
 test('wrapText는 수동 빈 줄과 이모지 그래핀을 보존한다', () => {
   const ctx = contextMock();
   const family = '👨‍👩‍👧‍👦';

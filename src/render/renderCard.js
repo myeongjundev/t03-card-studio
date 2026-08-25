@@ -657,9 +657,9 @@ const blockHeightOf = (lineCount, fontSize, lineHeight) =>
  *
  * 줄이는 비율을 넘침 정도에서 계산하므로 보통 두세 번이면 수렴한다.
  */
-export function layoutText(ctx, state, width, height) {
-  const maxWidth = width * TEXT_MAX_WIDTH_RATIO;
-  const maxHeight = height * TEXT_MAX_HEIGHT_RATIO;
+export function layoutText(ctx, state, width, height, textBox = null) {
+  const maxWidth = textBox?.width ?? width * TEXT_MAX_WIDTH_RATIO;
+  const maxHeight = textBox?.height ?? height * TEXT_MAX_HEIGHT_RATIO;
 
   let fontSize = state.fontSize;
   let lines = [];
@@ -737,14 +737,14 @@ function drawPersonaEmphasis(ctx, state, width, height, block) {
   // 기본은 아무것도 깔지 않는다. 담백하게 두는 것이 그 모습이다.
 }
 
-function drawText(ctx, state, width, height) {
+function drawText(ctx, state, width, height, textBox = null) {
   const empty = { lineCount: 0, fontSize: state.fontSize, shrunk: false, area: null };
   if (String(state.text ?? '').trim() === '') return empty; // 빈 문구여도 앱이 깨지지 않는다
 
   ctx.textBaseline = 'middle';
   ctx.fillStyle = state.color;
 
-  const { lines, fontSize } = layoutText(ctx, state, width, height);
+  const { lines, fontSize } = layoutText(ctx, state, width, height, textBox);
   ctx.textAlign = state.align;
 
   // 외곽선은 글자 바깥으로 절반만큼 번진다. 자리 계산에 그만큼을 더해야
@@ -759,8 +759,12 @@ function drawText(ctx, state, width, height) {
     lines.reduce((widest, line) => Math.max(widest, ctx.measureText(line).width), 0) +
     strokeWidth;
 
-  const marginX = (width * (1 - TEXT_MAX_WIDTH_RATIO)) / 2;
-  const marginY = (height * (1 - TEXT_MAX_HEIGHT_RATIO)) / 2;
+  const bounds = textBox ?? {
+    x: (width * (1 - TEXT_MAX_WIDTH_RATIO)) / 2,
+    y: (height * (1 - TEXT_MAX_HEIGHT_RATIO)) / 2,
+    width: width * TEXT_MAX_WIDTH_RATIO,
+    height: height * TEXT_MAX_HEIGHT_RATIO,
+  };
 
   // 위치를 끝까지 밀어도 문구가 화면 밖으로 나가지 않도록 블록째로 가둔다.
   // 정렬 기준에 따라 기준점과 블록 왼쪽 끝의 거리가 다르다.
@@ -768,13 +772,13 @@ function drawText(ctx, state, width, height) {
     state.align === 'center' ? blockWidth / 2 : state.align === 'right' ? blockWidth : 0;
   const left = clamp(
     state.textX * width - anchorOffset,
-    marginX,
-    width - marginX - blockWidth
+    bounds.x,
+    bounds.x + bounds.width - blockWidth
   );
   const top = clamp(
     state.textY * height - blockHeight / 2,
-    marginY,
-    height - marginY - blockHeight
+    bounds.y,
+    bounds.y + bounds.height - blockHeight
   );
 
   // 문구를 그리기 직전에 모습별 받침을 깐다. 글자 블록의 실제 크기를
@@ -841,5 +845,7 @@ export function renderCard(ctx, state, width, height) {
   // 비네팅·날짜 각인·카운터처럼 사진 위에 얹히는 것은 나중에 그린다.
   drawComposition(ctx, state, width, height, composition, 'over');
 
-  return drawText(ctx, state, width, height);
+  // 투명 배경은 시대 장식뿐 아니라 그 장식이 강제하는 문구 칸도 제거한다.
+  // 그래야 투명 PNG가 시대와 무관한 순수 문구 레이어로 남는다.
+  return drawText(ctx, state, width, height, state.transparentBg ? null : composition.textBox);
 }
