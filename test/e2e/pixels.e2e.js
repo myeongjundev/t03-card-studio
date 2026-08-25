@@ -458,3 +458,33 @@ test('사진을 올린 뒤에도 모습을 바꾸면 눈에 띄게 달라진다'
     }
   }
 });
+
+test('아홉 조합 모두 앱이 정한 가독성 기준을 넘는다', async () => {
+  // 두 번 놓쳤다. 시대 재설계 때 기본+2012 가 1.1:1 이 됐고, 모습 받침을
+  // 넣을 때 소셜/친한친구+2004 가 1.5~1.9:1 이 됐다. 둘 다 화면을 눈으로
+  // 봐서 알았지 테스트가 잡아 주지 않았다.
+  //
+  // 앱에는 이미 실제 픽셀을 읽는 가독성 검사가 있다. 그 결과를 읽는다.
+  await setRatio('1:1');
+
+  const failures = [];
+  for (const persona of ['기본', '소셜', '친한 친구']) {
+    await setPersona(persona);
+    for (const era of ['2004', '2012', '2026']) {
+      await setEra(era);
+      await page.waitForTimeout(200);
+
+      const verdict = await page.evaluate(() => {
+        const node = [...document.querySelectorAll('*')].find(
+          (el) => el.children.length === 0 && /대비\s*[\d.]+:1/.test(el.textContent)
+        );
+        return node ? node.textContent.trim() : null;
+      });
+
+      assert.ok(verdict, `${persona}+${era}: 가독성 표시를 찾지 못했다`);
+      if (/못 미칩니다/.test(verdict)) failures.push(`${persona}+${era} → ${verdict}`);
+    }
+  }
+
+  assert.deepEqual(failures, [], `기준에 못 미치는 조합이 있다:\n  ${failures.join('\n  ')}`);
+});

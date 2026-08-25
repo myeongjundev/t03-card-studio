@@ -78,6 +78,34 @@ body {
   padding: 16px;
 }
 .panel-preview { box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22); }
+
+/*
+  저장 패널은 스크롤을 따라온다.
+
+  가운데 열이 왼쪽·오른쪽보다 훨씬 길어서 오른쪽 아래가 크게 비어 있었다.
+  붙여 두면 그 자리가 죽은 공간이 아니라 패널이 지나가는 자리가 되고,
+  아래로 내려가서도 저장·불러오기를 바로 쓸 수 있다.
+
+  화면보다 길어질 때를 대비해 최대 높이를 두고 안쪽에서 스크롤시킨다.
+  그러지 않으면 템플릿이 쌓였을 때 아래가 잘려 손댈 수 없게 된다.
+*/
+@media (min-width: 981px) {
+  .panel-templates {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* 안쪽 스크롤 막대를 화면 색에 맞춘다. */
+  .panel-templates::-webkit-scrollbar { width: 9px; }
+  .panel-templates::-webkit-scrollbar-track { background: transparent; }
+  .panel-templates::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+  }
+  .panel-templates::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+}
 .panel > h2 {
   display: flex;
   align-items: center;

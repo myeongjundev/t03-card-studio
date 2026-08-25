@@ -295,6 +295,8 @@ const MINIHOMPY_BY_PERSONA = {
     mood: '그냥',
     moodColor: '#e2624f',
     barTint: '#f4f9fc',
+    page: '#ffffff',
+    edge: '#b9cddb',
     badge: null,
   },
   social: {
@@ -303,6 +305,8 @@ const MINIHOMPY_BY_PERSONA = {
     mood: '신남',
     moodColor: '#d1467f',
     barTint: '#fdf1f6',
+    page: '#fff5fa',
+    edge: '#e8aac6',
     badge: { text: '일촌평 12', color: '#d1467f' },
   },
   'close-friends': {
@@ -311,11 +315,60 @@ const MINIHOMPY_BY_PERSONA = {
     mood: '피곤',
     moodColor: '#2c6ea8',
     barTint: '#f2f7fb',
+    page: '#f2f7fd',
+    edge: '#9ec0e0',
     badge: { text: '비공개', color: '#2c6ea8' },
   },
 };
 
-function drawMinihompy(ctx, width, height, imageBox, layer, persona) {
+/**
+ * 사진을 아직 안 고른 사진첩 칸.
+ *
+ * 비워 두면 흰 사각형에 얇은 테두리만 남아 서식처럼 보인다. 첫 화면이
+ * 그러면 무엇을 하는 도구인지 알기 어렵다. 무엇이 들어갈 자리인지
+ * 그림으로 알려 준다.
+ */
+function drawPhotoPlaceholder(ctx, box, accent) {
+  ctx.fillStyle = '#eef3f7';
+  ctx.fillRect(box.x, box.y, box.width, box.height);
+
+  const unit = Math.min(box.width, box.height);
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2 - unit * 0.06;
+  const w = unit * 0.36;
+  const h = w * 0.72;
+
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = Math.max(2, unit * 0.014);
+  ctx.lineJoin = 'round';
+
+  // 사진 테두리
+  roundedRect(ctx, cx - w / 2, cy - h / 2, w, h, unit * 0.03);
+  ctx.stroke();
+
+  // 해와 산 — 사진을 뜻하는 가장 익숙한 그림이다.
+  ctx.beginPath();
+  ctx.arc(cx - w * 0.22, cy - h * 0.16, unit * 0.035, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(cx - w * 0.4, cy + h * 0.28);
+  ctx.lineTo(cx - w * 0.06, cy - h * 0.06);
+  ctx.lineTo(cx + w * 0.14, cy + h * 0.14);
+  ctx.lineTo(cx + w * 0.28, cy);
+  ctx.lineTo(cx + w * 0.4, cy + h * 0.28);
+  ctx.stroke();
+  ctx.restore();
+
+  metaText(
+    ctx, '사진을 올려 보세요',
+    cx, cy + h * 0.62, unit * 0.075, '#8aa9bf', 'center'
+  );
+}
+
+function drawMinihompy(ctx, width, height, imageBox, layer, persona, hasImage) {
   if (layer !== 'under') return;
 
   const skin = MINIHOMPY_BY_PERSONA[persona] ?? MINIHOMPY_BY_PERSONA.normal;
@@ -327,10 +380,10 @@ function drawMinihompy(ctx, width, height, imageBox, layer, persona) {
   const inner = width * 0.012;
 
   // 종이 한 장. 미니홈피는 늘 흰 페이지였다.
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = skin.page;
   roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.022);
   ctx.fill();
-  ctx.strokeStyle = '#b9cddb';
+  ctx.strokeStyle = skin.edge;
   ctx.lineWidth = Math.max(2, width * 0.003);
   roundedRect(ctx, cardX, cardY, cardW, cardH, width * 0.022);
   ctx.stroke();
@@ -397,6 +450,7 @@ function drawMinihompy(ctx, width, height, imageBox, layer, persona) {
   const m = width * 0.013;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(imageBox.x - m, imageBox.y - m, imageBox.width + m * 2, imageBox.height + m * 2);
+  if (!hasImage) drawPhotoPlaceholder(ctx, imageBox, skin.accent);
   ctx.strokeStyle = '#9fc0d6';
   ctx.lineWidth = Math.max(1, width * 0.002);
   ctx.strokeRect(imageBox.x - m, imageBox.y - m, imageBox.width + m * 2, imageBox.height + m * 2);
@@ -583,7 +637,7 @@ function drawComposition(ctx, state, width, height, composition, layer) {
 
   ctx.save();
   if (composition.era === '2004') {
-    drawMinihompy(ctx, width, height, composition.imageBox, layer, state.persona);
+    drawMinihompy(ctx, width, height, composition.imageBox, layer, state.persona, Boolean(state.image));
   } else if (composition.era === '2012') {
     drawFilm(ctx, width, height, composition.imageBox, layer, composition.era);
   } else {
@@ -644,6 +698,11 @@ const clamp = (value, min, max) => (max < min ? min : Math.min(Math.max(value, m
 function drawPersonaEmphasis(ctx, state, width, height, block) {
   // 투명 배경은 장식을 그리지 않는다는 약속을 여기서도 지킨다.
   if (state.transparentBg) return;
+
+  // 2004 는 건너뛴다. 밝은 싸이월드 페이지 위에 어두운 받침을 깔면 어두운
+  // 다이어리 글이 묻힌다(실제로 대비가 1.5:1 까지 떨어졌다). 이 시대는
+  // 페이지 스킨·제목·기분·배지가 이미 모습을 말해 준다.
+  if (state.era === '2004') return;
 
   if (state.persona === 'social') {
     // 보여지는 나: 피드에서 눈에 걸리도록 아래를 크게 눌러 준다.

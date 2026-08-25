@@ -122,6 +122,18 @@ export const COMBINATION_STYLES = {
     strokeColor: '#ffffff', strokeWidth: 0, fontSize: 60,
     lineHeight: 1.7, align: 'left', textX: 0.16, textY: 0.805,
   },
+  // 필름은 화면 전체가 사진이고 따뜻하게 바랜다. 글자는 크림색이
+  // 어울리고, 어두운 테두리를 둬야 밝은 하늘 위에서도 읽힌다.
+  'close-friends:2012': {
+    recommendedRatio: '1:1', fit: 'cover', bgColor: '#2f2a24', color: '#fdf3e0',
+    strokeColor: '#241a10', strokeWidth: 0.05, fontSize: 92,
+    lineHeight: 1.4, align: 'left', textX: 0.11, textY: 0.78,
+  },
+  'social:2012': {
+    recommendedRatio: '4:5', fit: 'cover', bgColor: '#3a2b28', color: '#fff3df',
+    strokeColor: '#1e1209', strokeWidth: 0.065, fontSize: 132,
+    lineHeight: 1.18, align: 'center', textX: 0.5, textY: 0.72,
+  },
   'normal:2012': {
     recommendedRatio: '1:1', fit: 'cover', bgColor: '#eef1f4', color: '#172033',
     strokeColor: '#ffffff', strokeWidth: 0, fontSize: 92,
