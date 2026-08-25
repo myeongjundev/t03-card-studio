@@ -1,61 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderCard } from '../src/render/renderCard.js';
-import { toGraphemes } from '../src/render/wrapText.js';
 import { createInitialState, ERA_KEYS, PERSONA_KEYS } from '../src/state/editorState.js';
-
-// 픽셀을 세는 대신 "무엇을 그렸는가"를 기록한다.
-// node에는 진짜 Canvas가 없고, 기록 방식이 더 결정적이다 —
-// 래스터화 차이나 안티에일리어싱에 흔들리지 않는다.
-const PAINTING_CALLS = new Set([
-  'fillRect',
-  'strokeRect',
-  'fill',
-  'stroke',
-  'fillText',
-  'strokeText',
-  'drawImage',
-  'clearRect',
-]);
-
-function tracingContext() {
-  const trace = [];
-  let fontSize = 16;
-  const gradient = { addColorStop() {} };
-
-  const target = {
-    trace,
-    font: '16px sans-serif',
-    measureText(value) {
-      return { width: toGraphemes(value).length * fontSize * 0.6 };
-    },
-    createLinearGradient: () => gradient,
-    createRadialGradient: () => gradient,
-  };
-
-  return new Proxy(target, {
-    get(obj, prop) {
-      if (prop in obj) return obj[prop];
-      // 그 외 모든 메서드는 호출만 기록한다.
-      return (...args) => {
-        if (PAINTING_CALLS.has(prop)) {
-          trace.push(`${String(prop)}(${args.map(describe).join(',')})`);
-        }
-      };
-    },
-    set(obj, prop, value) {
-      if (prop === 'font') {
-        fontSize = Number.parseFloat(String(value).match(/([0-9.]+)px/)?.[1] ?? '16');
-      }
-      obj[prop] = value;
-      return true;
-    },
-  });
-}
-
-// 좌표는 반올림해 비교한다. 값 자체가 아니라 "달라졌는가"를 보기 때문이다.
-const describe = (value) =>
-  typeof value === 'number' ? value.toFixed(2) : typeof value === 'object' ? '[obj]' : String(value);
+import { tracingContext } from './helpers/traceContext.js';
 
 function paintTrace(overrides) {
   const ctx = tracingContext();

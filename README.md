@@ -63,7 +63,8 @@ src/
   templates/  검증(schema)과 localStorage(storage)
   io/         이미지 내보내기, 템플릿 JSON 입출력
   components/ 편집 · 미리보기 · 템플릿 패널
-scripts/      검사용 이미지 생성 등 보조 스크립트
+scripts/      검사용 이미지 생성, 렌더 스냅샷 갱신, 브라우저 측정 스크립트
+test/         단위 테스트와 렌더 회귀 스냅샷(fixtures/)
 docs/         설계 · 검사표 · 검증 안내서 · 완성 이미지
 ```
 
