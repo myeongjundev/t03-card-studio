@@ -35,18 +35,49 @@ jobs:
       # 못해도 exit 0 이다. 그러면 "전부 통과" 와 "아무것도 실행 안 함" 이
       # 똑같이 초록불로 보인다. 파일이 옮겨지거나 이름 규칙이 바뀌면 조용히
       # 그렇게 될 수 있어서, 통과 개수가 0 이면 실패로 처리한다.
-      - name: Run tests
+      - name: Run unit tests
         run: |
           set -o pipefail
-          npm test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
-          passed=$(awk '/ pass [0-9]+$/ { p = $NF } END { print p + 0 }' "$RUNNER_TEMP/test-output.txt")
-          echo "통과한 테스트: $passed"
+          npm test 2>&1 | tee "$RUNNER_TEMP/unit.txt"
+          passed=$(awk '/ pass [0-9]+$/ { p = $NF } END { print p + 0 }' "$RUNNER_TEMP/unit.txt")
+          echo "통과한 단위 테스트: $passed"
           if [ "$passed" -lt 1 ]; then
-            echo "::error::테스트가 한 개도 실행되지 않았다. 검색 규칙을 확인할 것."
+            echo "::error::단위 테스트가 한 개도 실행되지 않았다. 검색 규칙을 확인할 것."
             exit 1
           fi
 
+      # e2e 는 dist 를 대상으로 한다. 개발 서버가 아니라 실제로 배포되는
+      # 산출물에서 픽셀을 봐야 의미가 있다.
       - run: npm run build
+
+      # 브라우저는 버전마다 경로가 달라서 버전을 키에 넣는다. 그러지 않으면
+      # playwright 를 올린 뒤에도 옛 브라우저 캐시를 복원해 설치가 깨진다.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # 진짜 브라우저에서 진짜 픽셀을 본다. 그리기 호출 기록(단위 테스트)이
+      # 잡지 못하는 것 — 예를 들어 컴포넌트가 캔버스에 덧그리는 경우 — 은
+      # 여기서만 걸린다.
+      - name: Run pixel e2e
+        run: |
+          set -o pipefail
+          npm run test:e2e 2>&1 | tee "$RUNNER_TEMP/e2e.txt"
+          passed=$(awk '/ pass [0-9]+$/ { p = $NF } END { print p + 0 }' "$RUNNER_TEMP/e2e.txt")
+          echo "통과한 e2e: $passed"
+          if [ "$passed" -lt 1 ]; then
+            echo "::error::e2e 가 한 개도 실행되지 않았다."
+            exit 1
+          fi
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
