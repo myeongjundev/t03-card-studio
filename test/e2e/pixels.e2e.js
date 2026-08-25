@@ -1,5 +1,6 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { chromium } from 'playwright';
 import { startDistServer } from './server.js';
 
@@ -301,4 +302,71 @@ test('2004 는 사진을 그 시절 화질로 바꾼다', async () => {
   await page.waitForTimeout(150);
   const again = await exportedPng();
   assert.equal(again.hash, agedPng.hash, '같은 설정인데 다시 그린 결과가 다르다');
+});
+
+test('이미지를 끌어다 놓으면 실제로 불러온다', async () => {
+  // 끌어다 놓기는 보기에만 반응하고 실제로는 안 되는 경우가 흔하다.
+  // 테두리 색이 아니라 캔버스가 바뀌는지로 확인한다.
+  await setRatio('1:1');
+  await setEra('2026');
+  await page.locator('button', { hasText: '이미지 제거' }).first().click().catch(() => {});
+  await page.waitForTimeout(200);
+
+  const before = await exportedPng();
+
+  const png = fs.readFileSync('public/sample/landscape-1600x600.png').toString('base64');
+  await page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const file = new File([bytes], 'dropped.png', { type: 'image/png' });
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+
+    const zone = document.querySelector('.dropzone');
+    zone.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: transfer }));
+    zone.dispatchEvent(new DragEvent('dragover', { bubbles: true, dataTransfer: transfer }));
+    zone.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: transfer }));
+  }, png);
+  await page.waitForTimeout(700);
+
+  const after = await exportedPng();
+  assert.notEqual(after.hash, before.hash, '끌어다 놓았는데 캔버스가 그대로다');
+
+  // 파일 이름이 화면에 보여야 무엇이 올라갔는지 알 수 있다.
+  const shown = await page.locator('.file-current').first().textContent();
+  assert.match(shown, /dropped\.png/, `올린 파일 이름이 보이지 않는다: ${shown}`);
+
+  // 끌던 표시는 놓은 뒤 사라져야 한다.
+  assert.equal(await page.locator('.dropzone.is-dragging').count(), 0, '끌기 표시가 남아 있다');
+});
+
+test('좁은 화면에서 가로 스크롤이 생기지 않는다', async () => {
+  // 화면 밖으로 숨긴 요소는 폭을 잃기 쉽다. 실제로 파일 입력을 감출 때
+  // `input[type='file'] { width: 100% }` 가 이겨서 375px 로 삐져나갔고,
+  // 모바일에 가로 스크롤이 생겼다.
+  const narrow = await browser.newPage({ viewport: { width: 375, height: 812 } });
+  try {
+    await narrow.goto(server.url, { waitUntil: 'networkidle' });
+    await narrow.waitForSelector('canvas');
+    await narrow.waitForTimeout(300);
+
+    const result = await narrow.evaluate(() => {
+      const docWidth = document.documentElement.clientWidth;
+      const overflowing = [];
+      document.querySelectorAll('*').forEach((el) => {
+        if (el.getBoundingClientRect().right > docWidth + 1) {
+          const name = typeof el.className === 'string' ? el.className.split(' ')[0] : '';
+          overflowing.push(`${el.tagName.toLowerCase()}.${name}`);
+        }
+      });
+      return {
+        scrolls: document.documentElement.scrollWidth > docWidth,
+        overflowing: [...new Set(overflowing)],
+      };
+    });
+
+    assert.deepEqual(result.overflowing, [], '화면 밖으로 나간 요소가 있다');
+    assert.equal(result.scrolls, false, '가로 스크롤이 생겼다');
+  } finally {
+    await narrow.close();
+  }
 });

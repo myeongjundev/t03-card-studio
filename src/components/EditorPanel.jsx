@@ -1,6 +1,6 @@
-import { useRef } from 'react';
 import { LIMITS, FITS, ALIGNS } from '../state/editorState.js';
 import { PRESETS, ERAS } from '../state/presets.js';
+import DropZone from './DropZone.jsx';
 
 const FIT_LABEL = { cover: '가득 채우기', contain: '전체 보이기' };
 const ALIGN_LABEL = { left: '왼쪽', center: '가운데', right: '오른쪽' };
@@ -37,15 +37,6 @@ export default function EditorPanel({
   onPickImage,
   onClearImage,
 }) {
-  const fileRef = useRef(null);
-
-  const handleFile = (event) => {
-    const file = event.target.files?.[0];
-    // 같은 파일을 다시 골라도 change 가 발생하도록 값을 비워 둔다.
-    event.target.value = '';
-    if (file) onPickImage(file);
-  };
-
   return (
     <section className="panel panel-editor" aria-labelledby="editor-heading">
       <h2 id="editor-heading"><span>01</span> 스타일 만들기</h2>
@@ -103,19 +94,22 @@ export default function EditorPanel({
       </div>
 
       <div className="field">
-        <label htmlFor="image-input">배경 이미지 (PNG · JPEG)</label>
-        <input
-          id="image-input"
-          ref={fileRef}
-          type="file"
+        <span className="field-label">배경 이미지</span>
+        <DropZone
           accept="image/png,image/jpeg"
-          onChange={handleFile}
+          onFile={onPickImage}
+          icon="image"
+          title={state.image ? '다른 이미지로 바꾸기' : '이미지 끌어다 놓기'}
+          hint={state.image ? '클릭해서 고를 수도 있습니다' : '또는 클릭해서 고르기 · PNG · JPEG'}
         />
-        <p className="hint">
-          {state.imageName
-            ? `현재 이미지: ${state.imageName}`
-            : '이미지를 고르지 않으면 배경색만 사용합니다.'}
-        </p>
+        {state.image ? (
+          <p className="file-current" title={state.imageName}>
+            <span className="file-dot" aria-hidden="true" />
+            {state.imageName}
+          </p>
+        ) : (
+          <p className="hint">이미지를 고르지 않으면 배경색만 사용합니다.</p>
+        )}
         {state.image && (
           <div className="button-row" style={{ marginTop: 8 }}>
             <button type="button" className="small" onClick={onClearImage}>

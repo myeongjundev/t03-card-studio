@@ -528,3 +528,103 @@ button.small { padding: 5px 10px; font-size: 13px; }
   cursor: pointer;
 }
 .ratio-suggestion:hover { background: rgba(184, 255, 92, 0.12); }
+
+/* ── 파일 고르기 ──────────────────────────────────── */
+/*
+  기본 <input type="file"> 은 브라우저가 그리는 작은 버튼이라 눈에 띄지 않고
+  무엇을 넣어야 하는지도 알려 주지 않는다. 넓은 영역으로 만들고 끌어다 놓기도 받는다.
+*/
+.field > .dropzone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 16px;
+  border: 1.5px dashed var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 192, 120, 0.04), rgba(255, 192, 120, 0.01));
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.dropzone:hover {
+  border-color: var(--accent);
+  background: rgba(255, 192, 120, 0.08);
+}
+.dropzone:active { transform: scale(0.995); }
+
+/* 끌어다 놓는 중에는 확실히 달라 보여야 놓아도 되는지 알 수 있다. */
+.dropzone.is-dragging {
+  border-color: var(--accent);
+  border-style: solid;
+  background: rgba(255, 192, 120, 0.16);
+}
+
+/* input 을 숨기되 키보드 초점은 살려 둔다. 초점이 오면 테두리로 알린다. */
+.dropzone:focus-within {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+input[type='file'].dropzone-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+  아이콘은 이모지가 아니라 SVG 로 그린다. 이모지는 글꼴이 없는 환경에서
+  네모(두부)로 깨지는데, 실제로 리눅스에서 그렇게 나왔다.
+*/
+.dropzone-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 192, 120, 0.12);
+  color: var(--accent);
+}
+.dropzone-icon svg { width: 20px; height: 20px; display: block; }
+.dropzone-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dropzone-title { color: var(--text); font-size: 13px; font-weight: 700; }
+.dropzone-hint { color: var(--muted); font-size: 11px; }
+
+.dropzone-compact { padding: 12px 14px; gap: 11px; }
+.dropzone-compact .dropzone-icon { width: 32px; height: 32px; border-radius: 9px; }
+.dropzone-compact .dropzone-icon svg { width: 16px; height: 16px; }
+.dropzone-compact .dropzone-title { font-size: 12px; }
+
+/* 지금 올라와 있는 파일. 이름이 길면 줄임표로 자른다. */
+.file-current {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 0 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 11px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.file-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+}

@@ -1,4 +1,5 @@
 import { LIMITS } from '../state/editorState.js';
+import DropZone from './DropZone.jsx';
 
 function formatDate(iso) {
   const date = new Date(iso);
@@ -119,16 +120,14 @@ export default function TemplatePanel({
       </div>
 
       <div className="field" style={{ marginTop: 10 }}>
-        <label htmlFor="json-input">설정 가져오기 (JSON)</label>
-        <input
-          id="json-input"
-          type="file"
+        <span className="field-label">설정 가져오기 (JSON)</span>
+        <DropZone
           accept="application/json,.json"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = '';
-            if (file) onImportJson(file);
-          }}
+          onFile={onImportJson}
+          icon="file"
+          title="JSON 파일 끌어다 놓기"
+          hint="또는 클릭해서 고르기"
+          compact
         />
         <p className="hint">
           파일을 모두 확인한 뒤에만 저장합니다. 형식이 맞지 않으면 가져오기를
