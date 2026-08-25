@@ -114,6 +114,16 @@ const setRatio = (ratio) => page.locator('.ratio-group button', { hasText: ratio
 const setPersona = (name) => clickText('.preset-grid button', name);
 const setEra = (era) => clickText('.era-timeline button', era);
 
+/** 접혀 있는 묶음을 펼친다. 이미 펼쳐져 있으면 그대로 둔다. */
+const openGroup = async (title) => {
+  const group = page.locator('details.group', { has: page.locator('.group-title', { hasText: title }) }).first();
+  if (!(await group.evaluate((el) => el.open))) {
+    await group.locator('summary').click();
+    await page.waitForTimeout(120);
+  }
+  return group;
+};
+
 test('미리보기 캔버스와 내보낸 PNG 가 같은 픽셀이다', async () => {
   // 제품의 핵심 약속. 화면용/저장용 렌더러가 갈라지면 여기서 깨진다.
   for (const [persona, era, ratio] of [
@@ -181,7 +191,8 @@ test('투명 배경을 켜면 알파가 실제로 보존된다', async () => {
   // 단위 테스트는 "장식을 그리지 않았다" 까지만 안다.
   // 알파 채널이 실제로 살아 있는지는 픽셀을 봐야 알 수 있다.
   await setRatio('1:1');
-  const transparent = page.locator('input[type="checkbox"]').first();
+  await openGroup('색과 테두리');
+  const transparent = page.locator('#transparent-bg');
   await transparent.check();
   await page.waitForTimeout(100);
 
@@ -369,4 +380,31 @@ test('좁은 화면에서 가로 스크롤이 생기지 않는다', async () => 
   } finally {
     await narrow.close();
   }
+});
+
+test('접이식 묶음이 열리고 닫히며 요약이 현재 값을 보여 준다', async () => {
+  // 편집 패널이 2,000px 가까이 길어서 자주 안 쓰는 항목을 접어 두었다.
+  // 접힌 상태에서도 지금 값이 무엇인지는 요약으로 알 수 있어야 한다.
+  const group = page
+    .locator('details.group', { has: page.locator('.group-title', { hasText: '문구 배치' }) })
+    .first();
+
+  // 접혀 있으면 안쪽 조작은 보이지 않아야 한다.
+  await group.evaluate((el) => { el.open = false; });
+  await page.waitForTimeout(120);
+  assert.equal(await page.locator('#font-size').isVisible(), false, '접혔는데 안쪽이 보인다');
+
+  const before = await group.locator('.group-summary').textContent();
+  assert.match(before, /px/, `요약에 현재 값이 없다: ${before}`);
+
+  await group.locator('summary').click();
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator('#font-size').isVisible(), true, '펼쳤는데 안쪽이 안 보인다');
+
+  // 값을 바꾸면 요약도 따라와야 한다. 접었을 때 옛 값이 남으면 오해를 준다.
+  await page.locator('#font-size').fill('200');
+  await page.waitForTimeout(200);
+  const after = await group.locator('.group-summary').textContent();
+  assert.notEqual(after, before, '값을 바꿨는데 요약이 그대로다');
+  assert.match(after, /200px/, `요약이 새 값을 보여주지 않는다: ${after}`);
 });

@@ -5,6 +5,32 @@ import DropZone from './DropZone.jsx';
 const FIT_LABEL = { cover: '가득 채우기', contain: '전체 보이기' };
 const ALIGN_LABEL = { left: '왼쪽', center: '가운데', right: '오른쪽' };
 
+/**
+ * 접이식 묶음.
+ *
+ * 편집 패널이 2,000px 가까이 길어져서 기본 조작을 하려면 한참 스크롤해야
+ * 했다. 자주 쓰지 않는 항목을 접어 둔다.
+ *
+ * `<details>` 를 쓰는 이유는 키보드 조작과 스크린리더 안내가 브라우저에
+ * 이미 들어 있기 때문이다. 직접 만들면 그것을 전부 다시 구현해야 한다.
+ */
+function Group({ title, summary, defaultOpen = false, children }) {
+  return (
+    <details className="group" open={defaultOpen}>
+      <summary className="group-head">
+        <span className="group-title">{title}</span>
+        {summary ? <span className="group-summary">{summary}</span> : null}
+        <span className="group-chevron" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M6 9.5l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </summary>
+      <div className="group-body">{children}</div>
+    </details>
+  );
+}
+
 /** 슬라이더와 숫자 표시를 한 줄로 묶는다. 현재 값을 항상 눈으로 확인할 수 있게 한다. */
 function Slider({ id, label, value, display, limit, onChange }) {
   return (
@@ -55,8 +81,10 @@ export default function EditorPanel({
               aria-label={`${preset.name}, ${preset.koreanName}, ${preset.era}: ${preset.hint}`}
               onClick={() => onUsePreset(preset.id)}
             >
-              <span className={`persona-silhouette ${preset.layout}`} aria-hidden="true">
-                <span />
+              {/* 사람 실루엣 대신 카드 레이아웃 미리보기. 무엇이 달라지는지 바로 보인다. */}
+              <span className={`persona-thumb ${preset.layout}`} aria-hidden="true">
+                <span className="persona-thumb-line" />
+                <span className="persona-thumb-line is-short" />
               </span>
               <span className="persona-name">{preset.name}</span>
               <span className="persona-korean">{preset.koreanName}</span>
@@ -149,6 +177,10 @@ export default function EditorPanel({
         />
       </div>
 
+      <Group
+        title="문구 배치"
+        summary={`${Math.round(state.textX * 100)}% · ${Math.round(state.textY * 100)}% · ${state.fontSize}px`}
+      >
       <Slider
         id="text-x"
         label="가로 위치"
@@ -205,6 +237,9 @@ export default function EditorPanel({
           ))}
         </div>
       </div>
+      </Group>
+
+      <Group title="색과 테두리" summary={state.color}>
 
       <div className="field">
         <label htmlFor="text-color">
@@ -296,6 +331,7 @@ export default function EditorPanel({
           </label>
         </p>
       </div>
+      </Group>
     </section>
   );
 }
