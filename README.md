@@ -85,8 +85,8 @@ e2e 를 처음 돌릴 때는 `npx playwright install chromium` 이 한 번 필�
 
 ## 성능
 
-- Hero와 Identity Archive의 원본 PNG는 보존합니다.
-- 실제 앱은 AVIF 파생본을 사용해 두 배너의 전송 크기를 약 **3.8MB → 138KB**로 줄였습니다.
+- Scanner와 Identity Archive의 원본 PNG는 보존합니다.
+- 실제 앱은 AVIF 파생본을 사용해 두 사진의 전송 크기를 약 **5.1MB → 175KB**로 줄였습니다.
 - 2004 이미지 보정은 이미지와 변형 조건별로 캐시해 문구 편집 때 같은 필터를 반복하지 않습니다.
 
 ## 문서

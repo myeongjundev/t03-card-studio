@@ -27,7 +27,7 @@ import EditorPanel from './components/EditorPanel.jsx';
 import PreviewPanel from './components/PreviewPanel.jsx';
 import TemplatePanel from './components/TemplatePanel.jsx';
 import TemporalScanner from './components/TemporalScanner.jsx';
-import identityBanner from '../배너이미지/짤스튜디오배너.avif';
+import identityBanner from '../배너이미지/짤스튜디오02.avif';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
 
@@ -691,7 +691,7 @@ export default function App() {
         <figure className="archive-banner" data-reveal style={{ '--reveal-order': 1 }}>
           <img
             src={identityBanner}
-            alt="같은 인물을 개인 웹 2004, 소셜 피드 2012, 숏폼 2026의 모습으로 나란히 표현한 ALTER EGO 타임라인"
+            alt="교복을 입은 두 사람이 바다를 마주하고 서 있는 여름날 사진. 이 앱이 세 시대로 다시 기록하는 원본 사진이다."
           />
           <figcaption>ONE PHOTO · THREE ERAS · THREE IDENTITIES</figcaption>
         </figure>

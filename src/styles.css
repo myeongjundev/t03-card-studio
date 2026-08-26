@@ -1104,9 +1104,23 @@ html { scroll-behavior: smooth; }
   background: linear-gradient(145deg, rgba(249,246,238,.9), rgba(249,246,238,.14));
 }
 .scanner-person::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.13) 3px 4px); }
+/*
+  세 시대가 **같은 사진의 같은 부분**을 보여준다.
+
+  예전에는 가로 3분할(background-size: 300%)로 시대마다 사진의 다른 3분의 1을
+  보여줬다. 그 시절 이미지가 세 시대를 나란히 그린 콜라주였기 때문이다.
+  지금은 진짜 사진 한 장이라, 부분을 나눠 보여주면 시대를 넘길 때마다 **서로
+  다른 사진처럼** 보인다. 이 제품의 한 줄이 "같은 사진. 다른 시대." 인데
+  시그니처 조작이 정반대를 말하는 셈이다.
+
+  그래서 cover 로 채우고 위치를 하나로 고정한다. 시대마다 달라지는 것은
+  사진이 아니라 사진이 놓이는 칸의 모양과 그 위의 색·질감뿐이다.
+  60% 는 두 인물(가로 40%·71%)이 가장 좁은 2026 칸에서도 함께 들어오는 값이다.
+*/
 .scanner-person.has-banner-image {
   background-repeat: no-repeat;
-  background-size: 300% auto;
+  background-size: cover;
+  background-position: 60% center;
 }
 .scanner-person.has-banner-image::before { display: none; }
 
@@ -1115,23 +1129,27 @@ html { scroll-behavior: smooth; }
 .scanner-era-2004 .scanner-window-chrome { position: absolute; z-index: 4; top: 4%; left: 5%; right: 5%; height: 22px; padding: 0 7px; display: flex; align-items: center; gap: 4px; border: 1px solid #a8bfce; background: #eef7fc; font-size: 7px; }
 .scanner-window-chrome i { width: 5px; height: 5px; border-radius: 50%; background: #7aa1b9; }
 .scanner-window-chrome span { margin-left: auto; opacity: .7; }
-.scanner-era-2004 .scanner-person { z-index: 2; left: 8%; right: 8%; top: 14%; height: 57%; border: 6px solid white; background: #8db9d3; filter: saturate(.7); }
-.scanner-era-2004 .scanner-person.has-banner-image { background-position: left center; }
+/*
+  아래 세 시대의 .scanner-person 은 배경색을 **background-color 로만** 지정한다.
+  background 단축 속성을 쓰면 같은 선언에서 background-size 가 auto 로
+  초기화되는데, 이 규칙들이 .scanner-person.has-banner-image(0,2,0)와 명시도가
+  같으면서 뒤에 오기 때문에 위에서 정한 300% 3분할을 매번 덮어 버린다.
+  사진이 원본 크기로 깔려 시대마다 가로의 20%씩만 보이고 있었다.
+*/
+.scanner-era-2004 .scanner-person { z-index: 2; left: 8%; right: 8%; top: 14%; height: 57%; border: 6px solid white; background-color: #8db9d3; filter: saturate(.7); }
 .scanner-era-2004 p { left: 10%; bottom: 12%; font-family: Georgia, serif; font-size: clamp(14px, 1.3vw, 19px); font-weight: 700; line-height: 1.35; }
 .scanner-era-2004 small { left: 10%; bottom: 5%; font-size: 7px; }
 
 .scanner-era-2012 { color: #34252a; background: #e9bdc8; }
 .scanner-era-2012::after { background: linear-gradient(rgba(255,244,235,.08), rgba(98,51,54,.1)), repeating-linear-gradient(90deg, transparent 0 2px, rgba(70,30,34,.025) 2px 3px); }
-.scanner-era-2012 .scanner-person { z-index: 2; left: 6%; right: 6%; top: 6%; height: 69%; background: #333230; filter: sepia(.3) contrast(.87); }
-.scanner-era-2012 .scanner-person.has-banner-image { background-position: center center; }
+.scanner-era-2012 .scanner-person { z-index: 2; left: 6%; right: 6%; top: 6%; height: 69%; background-color: #333230; filter: sepia(.3) contrast(.87); }
 .scanner-era-2012 p { left: 7%; bottom: 11%; color: #a46e7b; font-size: clamp(12px, 1.15vw, 16px); font-weight: 800; line-height: 1.3; }
 .scanner-era-2012 small { left: 7%; bottom: 5%; color: #8a6670; font-size: 7px; }
 
 .scanner-era-2026 { color: #dfffbb; border: 1px solid #88bd48; background: #10140f; }
 .scanner-era-2026::after { background: radial-gradient(circle at 50% 38%, rgba(125,173,75,.2), transparent 48%), repeating-linear-gradient(0deg, transparent 0 3px, rgba(184,255,92,.035) 3px 4px); }
 .scanner-era-2026 .live-tag { position: absolute; z-index: 4; top: 5%; right: 6%; color: #b8ff5c; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
-.scanner-era-2026 .scanner-person { z-index: 2; inset: 0; background: #1f291c; }
-.scanner-era-2026 .scanner-person.has-banner-image { background-position: right center; }
+.scanner-era-2026 .scanner-person { z-index: 2; inset: 0; background-color: #1f291c; }
 .scanner-era-2026 .scanner-person::before { width: 64%; height: 78%; }
 .scanner-era-2026 p { left: 7%; bottom: 9%; color: #e8ffd0; font-size: clamp(20px, 2vw, 30px); font-weight: 950; line-height: .92; letter-spacing: -.04em; }
 .scanner-era-2026 small { left: 7%; bottom: 4%; color: #a3d66b; font-size: 7px; }
