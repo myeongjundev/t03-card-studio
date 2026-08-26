@@ -2163,3 +2163,54 @@ body:has(.panel-preview.is-showcase) .to-top { display: none; }
     transform: none;
   }
 }
+
+/*
+  첫 화면의 바로 시작 컨트롤.
+
+  아래 Studio 와 같은 state 를 쓰는 같은 도구다. 첫 화면에서 사진과 문구를
+  바로 다룰 수 있어야 한다는 요구를 링크나 바로가기가 아니라 실제 입력으로
+  만족시킨다.
+
+  버튼처럼 보이게 하지 않는다. 첫 화면의 주 행동은 Scanner 의 'ENTER ERA'
+  하나이고, 이것이 채워진 버튼으로 보이면 그 위계가 흐려진다.
+*/
+.hero-quick {
+  width: 100%;
+  max-width: 430px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .62);
+}
+.hero-quick .dropzone { padding: 12px 14px; border-radius: 10px; }
+.hero-quick .dropzone-title { font-size: 13px; font-weight: 700; }
+.hero-quick .dropzone-hint { font-size: 11px; }
+
+.hero-quick-text { display: grid; gap: 5px; }
+.hero-quick-text > span {
+  font-family: var(--font-meta);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.hero-quick-text textarea {
+  width: 100%;
+  min-height: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--text);
+  font-family: var(--font-korean);
+  font-size: 14px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+@media (max-width: 640px) {
+  .hero-quick { max-width: none; padding: 12px; }
+}

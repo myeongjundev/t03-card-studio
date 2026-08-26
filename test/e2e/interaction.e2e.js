@@ -264,6 +264,59 @@ test('동작 줄이기에서는 처음부터 다 보인다', async () => {
   }
 });
 
+test('첫 화면에서 스크롤 없이 사진과 문구를 바꿀 수 있다', async () => {
+  // 과제 통과 기준 T03-C03 — 이미지 편집 도구와 문구 편집 도구가 첫 화면에
+  // 보여야 한다. 첫 화면을 랜딩으로 만들면서 한때 편집 도구가 3,500px
+  // 아래로 밀려 이 기준이 깨져 있었다. 화면 폭에 따라 다시 밀릴 수 있으므로
+  // 좁은 화면까지 함께 본다.
+  //
+  // '보인다' 로 끝내지 않는다. 바로가기 링크를 놓아도 보이기는 하므로,
+  // 여기서 바꾼 것이 실제 편집 상태에 반영되는지까지 확인해야 진짜 도구다.
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }, { width: 390, height: 844 }]) {
+    const fresh = await browser.newPage({ viewport });
+    try {
+      await fresh.goto(server.url, { waitUntil: 'networkidle' });
+      await fresh.waitForSelector('canvas');
+      await fresh.waitForTimeout(400);
+
+      const hidden = await fresh.evaluate(() =>
+        [
+          ['이미지 편집 도구', '.hero-quick .dropzone'],
+          ['문구 편집 도구', '.hero-quick textarea'],
+        ]
+          .filter(([, sel]) => {
+            const el = document.querySelector(sel);
+            if (!el) return true;
+            const b = el.getBoundingClientRect();
+            return !(b.top < window.innerHeight && b.bottom > 0 && b.width > 0);
+          })
+          .map(([label]) => label)
+      );
+      assert.deepEqual(
+        hidden,
+        [],
+        `${viewport.width}px 첫 화면에서 스크롤해야 보이는 도구: ${hidden.join(', ')}`
+      );
+
+      // 같은 상태를 쓰는 진짜 도구인지.
+      await fresh.locator('.hero-quick textarea').fill('첫 화면 편집');
+      await fresh.waitForTimeout(400);
+      assert.equal(
+        await fresh.locator('#text-input').inputValue(),
+        '첫 화면 편집',
+        `${viewport.width}px 첫 화면 입력이 편집 상태에 반영되지 않았다`
+      );
+      assert.match(
+        await fresh.locator('.canvas-frame canvas').getAttribute('aria-label'),
+        /첫 화면 편집/,
+        `${viewport.width}px 첫 화면 입력이 미리보기에 그려지지 않았다`
+      );
+    } finally {
+      await fresh.close();
+    }
+  }
+});
+
 test('첫 화면의 주 행동은 하나다', async () => {
   // 예전에는 Hero 버튼과 Scanner CTA 가 둘 다 '바로 짤 만들기' 라고 적혀
   // 있고 색까지 같아서, 무엇이 다른지 화면에서 알 수 없었다.

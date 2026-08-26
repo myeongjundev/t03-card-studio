@@ -3,6 +3,7 @@ import {
   createInitialState,
   clampState,
   getCanvasSize,
+  LIMITS,
 } from './state/editorState.js';
 import { renderCard } from './render/renderCard.js';
 import { checkTextContrast } from './render/contrast.js';
@@ -27,6 +28,7 @@ import EditorPanel from './components/EditorPanel.jsx';
 import PreviewPanel from './components/PreviewPanel.jsx';
 import TemplatePanel from './components/TemplatePanel.jsx';
 import TemporalScanner from './components/TemporalScanner.jsx';
+import DropZone from './components/DropZone.jsx';
 import identityBanner from '../배너이미지/짤스튜디오02.avif';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
@@ -630,16 +632,42 @@ export default function App() {
               선을 움직여 시간 속의 다른 나를 먼저 만나보세요.
             </p>
             {/*
-              첫 화면의 주 행동은 Scanner 의 'ENTER ERA' 하나다. 예전에는 이
-              버튼도 '바로 짤 만들기' 라고 적혀 있어서 두 버튼이 같은 말을 하고
-              같은 색이었고, 무엇이 다른지 화면에서 알 수 없었다. 여기는
-              시대를 고르지 않고 건너뛰는 길이므로 그렇게 적고, 색도 낮춘다.
+              첫 화면에서 바로 편집을 시작한다.
+
+              여기 있던 '시대 없이 바로 시작' 버튼이 하던 일은 아래로
+              스크롤하는 것뿐이었는데, 그 경로는 상단 내비의 '제작 도구로 ↘'
+              가 이미 갖고 있었다. 약속만 하는 버튼을 지우고 그 자리에 진짜
+              입력을 놓는다.
+
+              바로가기가 아니라 **아래 Studio 와 같은 state 를 쓰는 같은
+              도구**다. 여기서 사진을 고르거나 문구를 치면 아래 미리보기가
+              곧바로 그것을 그린다.
+
+              첫 화면의 주 행동은 여전히 Scanner 의 'ENTER ERA' 하나다.
+              이 컨트롤은 버튼이 아니라 입력이라 그 위계를 흐리지 않는다.
             */}
             <div className="hero-actions">
-              <button type="button" className="hero-make-button" onClick={scrollToStudio}>
-                <span>시대 없이 바로 시작</span><b aria-hidden="true">↓</b>
-              </button>
-              <span>시대를 고르면 사진 화질과 기록 문법까지 함께 바뀝니다.</span>
+              <div className="hero-quick" role="group" aria-label="바로 시작">
+                <DropZone
+                  accept="image/png,image/jpeg"
+                  onFile={pickImage}
+                  icon="image"
+                  compact
+                  title={state.image ? '다른 사진으로 바꾸기' : '내 사진 올리기'}
+                  hint={state.image ? state.imageName : 'PNG · JPEG · 끌어다 놓아도 됩니다'}
+                />
+                <label className="hero-quick-text">
+                  <span>문구</span>
+                  <textarea
+                    value={state.text}
+                    rows={2}
+                    maxLength={LIMITS.textMaxLength}
+                    placeholder="넣고 싶은 문구를 적어보세요"
+                    onChange={(event) => update({ text: event.target.value })}
+                  />
+                </label>
+              </div>
+              <span>여기서 바꾼 것은 아래 미리보기에 그대로 반영됩니다.</span>
             </div>
           </div>
 
