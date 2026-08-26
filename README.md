@@ -1,20 +1,72 @@
-# ALTER / EGO — Time-Travel Identity Studio
+<div align="center">
 
-같은 사진을 2004·2012·2026의 인터넷 문법으로 다시 기록하는 인터랙티브 카드 스튜디오입니다.
-시간 경계를 직접 움직여 세 시대의 다른 정체성을 탐색하고, 선택한 장면을 나만의 카드로
-완성할 수 있습니다. 모든 처리는 브라우저 안에서만 이루어지며 이미지는 서버로 전송되지 않습니다.
+# ALTER / EGO
 
-**[Live Demo](https://myeongjundev.github.io/t03-card-studio/)**
+### 같은 사진. 다른 시대. 다른 나.
 
-![ALTER EGO — one photo, three eras, three identities](./배너이미지/짤스튜디오배너.png)
+한 장의 사진을 **2004 · 2012 · 2026** 의 인터넷 문법으로 다시 기록하는<br>
+local-first 인터랙티브 카드 스튜디오
 
-## Signature Experience
+<br>
 
-- **Temporal Scanner** — 사진 위의 경계선을 드래그해 두 시대를 한 프레임에서 비교합니다.
-- **Three Eras** — 2004 미니홈피, 2012 소셜 피드, 2026 실시간 숏폼의 시각 문법을 재현합니다.
-- **Three Identities** — 기본, 소셜, 친한 친구에게 보이는 나를 서로 다른 레이아웃으로 설계합니다.
-- **Local-first Canvas** — 업로드 이미지, 편집 상태, PNG 생성이 브라우저 밖으로 나가지 않습니다.
-- **One rendering truth** — 화면 미리보기와 다운로드가 같은 Canvas를 사용해 픽셀 차이가 없습니다.
+**[→ 지금 사용해보기](https://myeongjundev.github.io/t03-card-studio/)**
+
+`React 19` · `Vite 8` · `런타임 의존성 2개` · `단위 70 · e2e 28`
+
+<br>
+
+<img src="docs/screenshots/hero.webp" alt="ALTER EGO 첫 화면. 왼쪽에 '같은 사진. 다른 시대. 다른 나.' 제목, 오른쪽에 시대를 탐색하는 Temporal Scanner." width="100%">
+
+</div>
+
+<br>
+
+## 한 장의 사진이 세 시대를 지날 때
+
+같은 사진, 같은 문구입니다. 바뀌는 것은 **그 시대가 사진을 다루던 방식** 입니다.
+필터를 덧씌우는 것이 아니라 화질·프레임·메타데이터·기록 문법을 시대별로 다시 설계했습니다.
+
+<table>
+<tr>
+<td width="33%"><img src="docs/screenshots/card-2004.webp" alt="2004 미니홈피 스타일 카드" width="100%"></td>
+<td width="33%"><img src="docs/screenshots/card-2012.webp" alt="2012 필름 사진 스타일 카드" width="100%"></td>
+<td width="33%"><img src="docs/screenshots/card-2026.webp" alt="2026 숏폼 썸네일 스타일 카드" width="100%"></td>
+</tr>
+<tr>
+<td><b>2004 · 미니홈피</b><br>방문자 수, 다이어리 칸, BGM 줄.<br>사진은 그 시절 폰 화질로 —<br>뭉개진 해상도, 날아간 하이라이트, 보라 기울기.</td>
+<td><b>2012 · 필름</b><br>인화된 사진의 화질.<br>입자, 색바램, 비네팅, 날짜 각인.</td>
+<td><b>2026 · 숏폼</b><br>세로 화면, 자막형 큰 글씨,<br>실시간 배지. 사진은 원본 그대로.</td>
+</tr>
+</table>
+
+## Temporal Scanner
+
+첫 화면의 경계선을 끌면 **두 시대가 한 프레임 안에 동시에** 나타납니다.
+콜라주가 아니라 실제 레이어 두 장이 경계선에서 갈리며, 놓는 순간 가장 가까운 시대로 고정됩니다.
+
+탐색은 편집 상태를 건드리지 않습니다. `ENTER ERA` 를 누를 때만 선택한 시대가 Studio 로
+전달되고, 그동안 쓰던 문구와 사진은 그대로 남습니다.
+
+<img src="docs/screenshots/scanner.webp" alt="Temporal Scanner 를 끄는 중. 왼쪽은 2012 피드, 오른쪽은 2004 미니홈피가 경계선을 사이에 두고 동시에 보인다." width="100%">
+
+## Studio
+
+`모습 → 시대 → 내 사진` 세 단계면 카드가 완성됩니다.
+미리보기 캔버스는 출력 해상도(1080px) 그대로이고, 다운로드는 **그 캔버스를 그대로** 파일로 만듭니다.
+
+<img src="docs/screenshots/studio.webp" alt="Studio 화면. 왼쪽 스타일 편집, 가운데 결과 미리보기와 게시 전 확인, 오른쪽 템플릿 저장." width="100%">
+
+## 시대만 축이 아닙니다
+
+시대가 **언제** 를 맡는다면, 모습(Persona)은 **누구에게 보이는 나** 를 맡습니다.
+`기본 · 소셜 · 친한 친구` 를 시대와 곱해 27가지 조합이 나오고, 각각 문구의 자리와
+색, 받침 레이어가 다릅니다. 모습을 바꿔도 쓰던 문구와 사진, 화면 비율은 건드리지 않습니다.
+
+## 내 브라우저 밖으로 나가지 않습니다
+
+고른 사진은 업로드되지 않습니다. 편집 상태도, PNG 생성도 전부 브라우저 안에서 끝납니다.
+공유 링크에는 설정만 담기고 이미지는 담기지 않으며, 템플릿은 이 기기의 localStorage 에만
+저장됩니다. 서버가 없어서 못 보내는 것이 아니라 **보내지 않도록 설계** 했습니다.
 
 ## 실행
 
@@ -35,8 +87,8 @@ npm.cmd run dev
 ## 검사
 
 ```bash
-npm test                              # 단위 테스트 (브라우저 불필요)
-npm run build && npm run test:e2e     # 실제 브라우저에서 픽셀 검사
+npm test                              # 단위 70개 (브라우저 불필요)
+npm run build && npm run test:e2e     # 실제 브라우저 28개
 ```
 
 e2e 를 처음 돌릴 때는 `npx playwright install chromium` 이 한 번 필요합니다.
@@ -45,6 +97,14 @@ e2e 를 처음 돌릴 때는 `npx playwright install chromium` 이 한 번 필�
 **단위 테스트는 "무엇을 그리라고 시켰는가"** 를 그리기 호출 기록으로 고정하고,
 **e2e 는 "실제로 어떤 픽셀이 나왔는가"** 를 봅니다. 역할이 다릅니다 — 예를 들어
 컴포넌트가 캔버스에 직접 덧그리는 결함은 렌더러가 멀쩡하므로 e2e 에서만 걸립니다.
+
+e2e 는 세 갈래입니다.
+
+| 파일 | 무엇을 지키는가 |
+| --- | --- |
+| `pixels.e2e.js` | 미리보기와 PNG 가 같은 픽셀인지, 세 시대가 실제로 다른 픽셀인지, 같은 설정이 같은 결과를 내는지 |
+| `interaction.e2e.js` | 실제로 배포된 적이 있는 조작 결함 — 방향키로 시대를 탐색할 수 있는지, 페이지 안 이동이 공유 링크를 지우지 않는지 |
+| `contrast.e2e.js` | 화면의 모든 글자가 읽히는지. 알림·경고·선택 상태·어두운 전시 화면까지 상태를 만들어 가며 잽니다 |
 
 ## 기능
 
@@ -109,7 +169,10 @@ src/
   components/ Temporal Scanner · 편집 · 미리보기 · 템플릿 패널
 scripts/      검사용 이미지 생성, 렌더 스냅샷 갱신, 브라우저 측정 스크립트
 test/         단위 테스트와 렌더 회귀 스냅샷(fixtures/)
-docs/         설계 · 검사표 · 검증 안내서 · 완성 이미지
+  e2e/        실제 브라우저 검사 (픽셀 · 조작 · 대비)
+docs/         설계 · 검사표 · 검증 안내서
+  screenshots/  이 문서에 쓰는 실제 화면 (Playwright 로 촬영)
+배너이미지/    원본 사진과 앱이 쓰는 AVIF 파생본
 ```
 
 ## AI 사용 기록
