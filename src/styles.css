@@ -1788,15 +1788,37 @@ html { color-scheme: light; accent-color: var(--accent); }
   text-wrap: balance;
 }
 
+/*
+  서사 섹션은 상자가 아니다.
+  ─────────────────────────────────────────────────────────────
+  한때 이 섹션들이 둥근 카드로 감싸여 있었다. 판단이라기보다 두 레이어가
+  겹친 결과였다 — 편집형 레이어는 이들을 전면 폭으로 설계해 놓았는데
+  (border-radius: 0, border-inline: 0, 가장자리로 흘러나가는 배경 글자),
+  나중 레이어가 같은 요소를 카드로 다시 감쌌다. 배경 글자가 둥근 모서리에
+  잘려 'IDE' 세 글자만 남던 것도 그 충돌의 증상이었다.
+
+  더 큰 문제는 **모든 것이 카드였다는 것**이다. 읽는 섹션도 카드, 조작하는
+  패널도 카드. 전부 카드면 카드는 아무 뜻도 갖지 못한다.
+
+  둘은 하는 일이 다르다. 이 섹션들은 스크롤하며 읽고 지나가는 곳이고,
+  아래 세 패널은 실제로 만지는 작업 표면이다. 그래서 여기서는 상자를 걷고
+  여백과 얇은 선으로만 나눈다. 카드는 패널에만 남겨 "카드 = 작업 표면"
+  이라는 뜻을 갖게 한다.
+*/
+.project-story,
+.identity-archive {
+  margin-block: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
 .project-story {
   grid-template-columns: 120px minmax(0, 1fr);
   gap: 26px clamp(34px, 6vw, 94px);
-  margin-block: 32px;
   padding-block: clamp(56px, 6vw, 92px);
-  border: 1px solid rgba(30, 64, 175, .14);
-  border-radius: 26px;
-  background: linear-gradient(140deg, rgba(255,252,249,.92), rgba(234,241,251,.88));
-  box-shadow: 0 20px 64px rgba(60,72,110,.08);
 }
 .project-story::before { color: rgba(30,64,175,.055); }
 .story-main h2 {
@@ -1831,14 +1853,6 @@ html { color-scheme: light; accent-color: var(--accent); }
   background: rgba(255,255,255,.68);
 }
 
-.identity-archive {
-  border: 1px solid rgba(30, 64, 175, .14);
-  border-radius: 26px;
-  background:
-    radial-gradient(circle at 78% 50%, rgba(160,190,240,.3), transparent 32%),
-    var(--panel);
-  box-shadow: 0 20px 64px rgba(60,72,110,.08);
-}
 .identity-archive::before { color: rgba(30,64,175,.05); }
 .archive-heading > p { color: var(--accent); }
 .archive-heading h2 {
@@ -1856,10 +1870,15 @@ html { color-scheme: light; accent-color: var(--accent); }
   */
   grid-template-columns: 120px auto 1fr;
   align-items: baseline;
-  margin-top: 32px;
-  padding-block: clamp(52px, 5.5vw, 84px) 30px;
+  /*
+    이건 섹션이 아니라 아래 세 패널의 **제목**이다. 상자에 넣으면 소개하는
+    대상과 떨어져서, 제목과 도구 사이에 바탕색 틈이 생긴다. 상자를 빼고
+    아래 여백을 좁혀 패널에 붙인다.
+  */
+  margin-top: 0;
+  padding-block: clamp(52px, 5.5vw, 84px) 22px;
   border-top: 1px solid var(--line);
-  background: linear-gradient(110deg, rgba(255,252,249,.82), rgba(234,241,251,.72));
+  background: none;
 }
 .studio-intro h2 {
   max-width: 22ch;
@@ -2009,8 +2028,6 @@ select { border-radius: 12px; }
   .masthead { border-radius: 20px; }
   .masthead .hero-copy h1 { --kr-size: clamp(38px, 11vw, 52px); }
   .masthead .hero-copy .hero-lead { font-size: 15px; line-height: 1.75; }
-  .project-story,
-  .identity-archive { border-radius: 20px; }
   .project-story { grid-template-columns: 1fr; }
   .story-note { grid-column: 1; grid-template-columns: 1fr; }
   .story-main h2,
