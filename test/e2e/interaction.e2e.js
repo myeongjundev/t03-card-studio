@@ -343,3 +343,71 @@ test('첫 화면의 주 행동은 하나다', async () => {
   assert.equal(filled.length, 1, `첫 화면에 채워진 버튼이 ${filled.length}개다: ${filled.join(' / ')}`);
   assert.match(filled[0], /짤 만들기/, `주 행동이 시대 진입 CTA 가 아니다: ${filled[0]}`);
 });
+
+test('지원하지 않는 파일은 거부하고, 그때까지의 작업을 건드리지 않는다', async () => {
+  // 완주 체크리스트의 "잘못된 파일 거부" 항목. 구현과 문서에는 있었지만
+  // 자동 검사가 이것 하나만 없었다 — 즉 누가 pickImage 의 형식 검사를
+  // 지워도 검사는 전부 초록으로 통과했다.
+  //
+  // 거부의 핵심은 "오류가 뜬다" 가 아니라 **"아무것도 잃지 않는다"** 이다.
+  // 사진 한 장을 어렵게 고른 뒤 실수로 GIF 를 떨어뜨렸을 때 문구까지
+  // 날아가면, 오류 메시지가 아무리 친절해도 소용이 없다. 그래서 여기서는
+  // 메시지 문구보다 **직전 상태가 픽셀 단위로 남아 있는지**를 본다.
+  const fileInput = page.locator('input[type="file"]').first();
+
+  await fileInput.setInputFiles('public/sample/landscape-1600x600.png');
+  await page.waitForTimeout(700);
+  await page.locator('#text-input').fill('거부 검사 문구');
+  await page.waitForTimeout(300);
+
+  /** 캔버스를 성기게 훑어 온다. 전부 넘기면 느리다. */
+  const sample = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      const data = canvas
+        .getContext('2d', { willReadFrequently: true })
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      const out = [];
+      for (let i = 0; i < data.length; i += 32) out.push(data[i], data[i + 1], data[i + 2]);
+      return out;
+    });
+
+  const before = await sample();
+  assert.ok(before.some((v) => v !== before[0]), '거부 전 캔버스가 단색이다 — 사진이 안 실렸다');
+
+  // OS 파일 대화상자만 건너뛴다. 형식 검사부터는 전부 실제 코드가 돈다.
+  // accept 속성은 대화상자 필터일 뿐이라 실제 방어는 pickImage 안에 있고,
+  // 끌어다 놓기는 accept 를 아예 거치지 않는다. 그래서 여기로 밀어 넣는다.
+  const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+
+  for (const [name, mimeType, expected] of [
+    ['안되는그림.gif', 'image/gif', 'image/gif'],
+    // mimeType 을 비워 보내도 Chromium 이 application/octet-stream 으로 채운다.
+    // 앱의 '형식을 알 수 없음' 분기는 이 경로로는 닿지 않는다.
+    ['정체불명', '', 'application/octet-stream'],
+  ]) {
+    await fileInput.setInputFiles({ name, mimeType, buffer: GIF });
+    await page.waitForSelector('.notice.error');
+
+    const notice = await page.locator('.notice.error').innerText();
+    assert.ok(
+      notice.includes('지원하지 않는 파일 형식입니다'),
+      `${name}: 거부 알림이 아니다 — ${notice}`
+    );
+    assert.ok(notice.includes(expected), `${name}: 무엇이 거부됐는지 안 알려 준다 — ${notice}`);
+
+    // 여기가 진짜 검사다.
+    assert.equal(
+      await page.locator('#text-input').inputValue(),
+      '거부 검사 문구',
+      `${name}: 거부하면서 문구를 날렸다`
+    );
+    assert.deepEqual(await sample(), before, `${name}: 거부하면서 캔버스를 바꿨다`);
+  }
+
+  // 거부 뒤에도 멀쩡한 파일은 여전히 받아야 한다. 오류 상태에 갇히면
+  // 사용자는 새로고침 말고는 빠져나갈 길이 없다.
+  await fileInput.setInputFiles('public/sample/portrait-800x1400.png');
+  await page.waitForTimeout(700);
+  assert.notDeepEqual(await sample(), before, '거부 뒤에 정상 파일을 받지 못했다');
+});
