@@ -195,6 +195,15 @@ test('경고 상태가 읽힌다', async () => {
   await audit(page, '안전 영역 가이드');
 });
 
+test('아래로 내려간 뒤 나타나는 것들이 읽힌다', async () => {
+  // '맨 위로' 는 한 화면쯤 내려가야 나온다. 첫 화면만 훑으면 검사되지 않는다.
+  await page.evaluate(() => window.scrollTo(0, window.innerHeight * 2));
+  await page.waitForSelector('.to-top');
+  await audit(page, '스크롤 후');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(200);
+});
+
 test('어두운 작품 화면에서도 모든 글자가 읽힌다', async () => {
   // 페이지에서 유일하게 어두운 면이다. 밝은 바탕용으로 고른 토큰을 그대로
   // 물려받으면 전부 반대로 작동한다 — 실제로 강조색 1.82:1, 보조 문구

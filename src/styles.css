@@ -1399,8 +1399,9 @@ select { font-family: var(--font-korean); }
   margin-top: .08em;
   font-family: var(--font-korean);
   font-style: normal;
+  /* 앞 두 줄보다 가볍게 두어 마지막 줄이 도드라진다. 자간은 위와 같이 0. */
   font-weight: 500;
-  letter-spacing: -.1em;
+  letter-spacing: 0;
   transform: skewX(-8deg);
 }
 .masthead .hero-copy .hero-lead {
@@ -1763,10 +1764,18 @@ html { color-scheme: light; accent-color: var(--accent); }
 .archive-heading h2,
 .studio-intro h2 {
   font-family: var(--font-korean);
-  font-weight: 800;
+  /*
+    굵기 700, 자간 0.
+
+    800 에 음수 자간이면 획이 굵어진 만큼 낱자 사이 여백이 먹혀서 글자가
+    서로 밀착한다. 한글은 자간을 좁히지 않아도 이미 조밀하니 0 이 기본값이고,
+    굵기를 한 단계 내리면 획 사이 흰 공간이 살아나 같은 크기에서도 더
+    또렷하게 읽힌다.
+  */
+  font-weight: 700;
   font-size: var(--kr-size);
   line-height: 1.24;
-  letter-spacing: -.018em;
+  letter-spacing: 0;
   word-break: keep-all;
   text-wrap: balance;
 }
@@ -2002,3 +2011,59 @@ select { border-radius: 12px; }
   .studio-intro { grid-template-columns: 1fr; }
   .panel { border-radius: 16px; }
 }
+
+/*
+  맨 위로.
+
+  왼쪽 아래에 둔다. 오른쪽 아래는 좁은 화면에서 '편집하며 보기' 의 떠 있는
+  미리보기(z-index 20)가 쓰는 자리라 겹친다.
+
+  z-index 는 그 미리보기보다는 위, '작품으로 보기'(z-index 100)보다는
+  아래다. 작품 화면은 화면을 꽉 채우는 전시 모드라 그 위에 편집용 버튼이
+  떠 있으면 안 되는데, 순서만 낮춰 두면 저절로 가려진다.
+*/
+.to-top {
+  position: fixed;
+  z-index: 30;
+  left: clamp(12px, 2vw, 24px);
+  bottom: clamp(12px, 2vw, 24px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 15px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-ink);
+  background: var(--accent);
+  font-family: var(--font-korean);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: 0 10px 26px rgba(30, 64, 175, .28);
+  animation: to-top-in 160ms ease-out;
+}
+.to-top span { font-size: 15px; line-height: 1; }
+.to-top:hover:not(:disabled) {
+  color: var(--accent-ink);
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+}
+
+@keyframes to-top-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+  .to-top { padding: 10px 13px; font-size: 12px; }
+}
+
+/*
+  작품 화면에서는 아예 없앤다.
+
+  z-index 만으로도 가려지긴 하지만, 가려진 버튼에 Tab 초점은 그대로 멈춘다.
+  화면에 보이지 않는 버튼에 초점이 가면 키보드 사용자는 지금 어디에 있는지
+  알 수 없다. :has() 를 지원하지 않는 브라우저에서는 이 규칙만 무시되고
+  가려지는 동작은 그대로 남는다.
+*/
+body:has(.panel-preview.is-showcase) .to-top { display: none; }

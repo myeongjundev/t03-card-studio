@@ -40,6 +40,7 @@ export default function App() {
   const [templates, setTemplates] = useState([]);
   const [templateName, setTemplateName] = useState('');
   const [editingId, setEditingId] = useState(null);
+  const [showTop, setShowTop] = useState(false);
 
   const canvasRef = useRef(null);
   const imageUrlRef = useRef(null);
@@ -534,6 +535,35 @@ export default function App() {
       ?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
   }, []);
 
+  /**
+   * 맨 위로 버튼.
+   *
+   * 문서가 4,000~6,500px 라 아래쪽에서 첫 화면으로 돌아가려면 한참 올려야
+   * 한다. 첫 화면에서는 올라갈 곳이 없으므로 한 화면쯤 내려간 뒤에만 낸다.
+   *
+   * 스크롤 이벤트는 아주 자주 오므로 매번 setState 하지 않는다. 보일지 말지
+   * 두 상태뿐이라, 값이 실제로 바뀔 때만 갱신하면 리렌더가 문서당 몇 번으로
+   * 줄어든다. rAF 로 한 프레임에 한 번만 읽어 강제 리플로도 피한다.
+   */
+  useEffect(() => {
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      const next = window.scrollY > window.innerHeight * 0.9;
+      setShowTop((current) => (current === next ? current : next));
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(read);
+    };
+    read();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   /** 이미지를 클립보드에 넣는다. 대화창에 바로 붙여넣기 위한 것이다. */
   const copyImage = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -724,6 +754,18 @@ export default function App() {
           onImportJson={importJson}
         />
       </div>
+
+      {/*
+        보일 때만 DOM 에 넣는다. 숨긴 채로 두면 Tab 이 화면에 없는 버튼에
+        멈춘다. 자리는 왼쪽 아래다 — 오른쪽 아래는 좁은 화면에서 '편집하며
+        보기' 의 떠 있는 미리보기가 쓴다.
+      */}
+      {showTop && (
+        <button type="button" className="to-top" onClick={scrollToTop}>
+          <span aria-hidden="true">↑</span>
+          맨 위로
+        </button>
+      )}
     </div>
   );
 }
