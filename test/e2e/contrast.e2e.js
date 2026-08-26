@@ -195,6 +195,21 @@ test('경고 상태가 읽힌다', async () => {
   await audit(page, '안전 영역 가이드');
 });
 
+test('어두운 작품 화면에서도 모든 글자가 읽힌다', async () => {
+  // 페이지에서 유일하게 어두운 면이다. 밝은 바탕용으로 고른 토큰을 그대로
+  // 물려받으면 전부 반대로 작동한다 — 실제로 강조색 1.82:1, 보조 문구
+  // 2.62:1 로 사라져 있었다. 이 스코프는 따로 훑어야 잡힌다.
+  await page.getByRole('button', { name: '작품으로 보기 ↗' }).click();
+  await page.waitForSelector('.panel-preview.is-showcase');
+  await page.waitForTimeout(200);
+  try {
+    await audit(page, '작품으로 보기');
+  } finally {
+    await page.getByRole('button', { name: '편집으로 돌아가기' }).click();
+    await page.waitForTimeout(200);
+  }
+});
+
 test('좁은 화면에서도 모든 글자가 읽힌다', async () => {
   // 좁은 화면에서만 나타나는 조작이 있다(플로팅 미리보기 전환 등).
   const narrow = await browser.newPage({ viewport: { width: 390, height: 844 } });

@@ -570,7 +570,7 @@ export default function App() {
   }, [state.ratio]);
 
   return (
-    <div className={`app era-${state.era}`}>
+    <div className="app">
       <header className="masthead">
         <nav className="top-nav" aria-label="주요 메뉴">
           <button
