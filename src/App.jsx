@@ -596,12 +596,18 @@ export default function App() {
           </p>
         </div>
         <div className="story-note">
-          <span>01 — MEMORY</span>
-          <p>개인 공간을 꾸미고 감정을 기록하던 2004년.</p>
-          <span>02 — FEED</span>
-          <p>사진 한 장으로 일상을 공유하기 시작한 2012년.</p>
-          <span>03 — SIGNAL</span>
-          <p>짧고 선명한 장면으로 나를 증명하는 2026년.</p>
+          <div className="story-era">
+            <span>01 — MEMORY</span>
+            <p>개인 공간을 꾸미고 감정을 기록하던 2004년.</p>
+          </div>
+          <div className="story-era">
+            <span>02 — FEED</span>
+            <p>사진 한 장으로 일상을 공유하기 시작한 2012년.</p>
+          </div>
+          <div className="story-era">
+            <span>03 — SIGNAL</span>
+            <p>짧고 선명한 장면으로 나를 증명하는 2026년.</p>
+          </div>
         </div>
       </section>
 
