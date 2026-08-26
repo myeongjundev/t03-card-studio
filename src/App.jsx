@@ -757,8 +757,8 @@ export default function App() {
 
       {/*
         보일 때만 DOM 에 넣는다. 숨긴 채로 두면 Tab 이 화면에 없는 버튼에
-        멈춘다. 자리는 왼쪽 아래다 — 오른쪽 아래는 좁은 화면에서 '편집하며
-        보기' 의 떠 있는 미리보기가 쓴다.
+        멈춘다. 자리는 관습대로 오른쪽 아래이고, 좁은 화면에서 떠 있는
+        미리보기가 그 자리를 쓸 때만 CSS 가 왼쪽으로 비켜 준다.
       */}
       {showTop && (
         <button type="button" className="to-top" onClick={scrollToTop}>

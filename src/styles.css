@@ -2015,8 +2015,12 @@ select { border-radius: 12px; }
 /*
   맨 위로.
 
-  왼쪽 아래에 둔다. 오른쪽 아래는 좁은 화면에서 '편집하며 보기' 의 떠 있는
-  미리보기(z-index 20)가 쓰는 자리라 겹친다.
+  오른쪽 아래가 이 버튼의 관습적인 자리다. 그대로 둔다.
+
+  다만 좁은 화면에서 '편집하며 보기' 를 켜면 떠 있는 미리보기가 같은 자리를
+  쓴다. 그때만 왼쪽으로 비킨다. 위로 올리는 방법도 있지만 미리보기 높이가
+  비율에 따라 160/194/264px 로 달라져서 고정 오프셋으로는 못 피한다.
+  좌우로 비키면 높이와 무관하게 항상 확실하다.
 
   z-index 는 그 미리보기보다는 위, '작품으로 보기'(z-index 100)보다는
   아래다. 작품 화면은 화면을 꽉 채우는 전시 모드라 그 위에 편집용 버튼이
@@ -2025,7 +2029,7 @@ select { border-radius: 12px; }
 .to-top {
   position: fixed;
   z-index: 30;
-  left: clamp(12px, 2vw, 24px);
+  right: clamp(12px, 2vw, 24px);
   bottom: clamp(12px, 2vw, 24px);
   display: inline-flex;
   align-items: center;
@@ -2056,6 +2060,12 @@ select { border-radius: 12px; }
 
 @media (max-width: 640px) {
   .to-top { padding: 10px 13px; font-size: 12px; }
+}
+
+/* 떠 있는 미리보기가 오른쪽 아래를 쓰는 동안만 반대쪽으로 비킨다. */
+body:has(.panel-preview.is-mobile-docked) .to-top {
+  right: auto;
+  left: clamp(12px, 2vw, 24px);
 }
 
 /*
