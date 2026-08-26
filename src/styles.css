@@ -2102,3 +2102,40 @@ body:has(.panel-preview.is-mobile-docked) .to-top {
   가려지는 동작은 그대로 남는다.
 */
 body:has(.panel-preview.is-showcase) .to-top { display: none; }
+
+/*
+  스크롤에 따라 드러나기.
+
+  숨기는 규칙이 [data-reveal-ready] 아래에만 있는 것이 핵심이다. 이 표시는
+  src/scrollReveal.js 가 관찰을 실제로 시작할 때만 붙인다. 스크립트가
+  실패하거나 아직 오지 않았다면 표시가 없으니 아무것도 숨겨지지 않는다.
+  본문이 빈 화면이 되는 사고를 구조로 막는다.
+
+  transition 을 드러난 뒤에만 거는 이유는, 처음 상태에 전환이 걸려 있으면
+  첫 페인트에서 한 번 깜빡이기 때문이다.
+*/
+:root[data-reveal-ready] [data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+:root[data-reveal-ready] [data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 560ms cubic-bezier(.22, .7, .2, 1),
+    transform 560ms cubic-bezier(.22, .7, .2, 1);
+  /* 같은 묶음 안에서 조금씩 늦춰 순서대로 올라오게 한다. */
+  transition-delay: calc(var(--reveal-order, 0) * 80ms);
+}
+
+/*
+  동작 줄이기에서는 scrollReveal 이 표시를 붙이지 않으므로 위 규칙이 애초에
+  적용되지 않는다. 그래도 한 겹 더 둔다 — 표시가 어떤 경로로든 남아 있게
+  되면 글이 사라지는 쪽으로 실패하기 때문이다.
+*/
+@media (prefers-reduced-motion: reduce) {
+  :root[data-reveal-ready] [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+}

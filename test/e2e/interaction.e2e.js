@@ -156,10 +156,126 @@ test('페이지 안에서 이동해도 공유 링크가 주소에 남는다', as
   }
 });
 
+/** 아직 흐린(드러나지 않은) 요소들. */
+const stillHidden = (target) =>
+  target.evaluate(() =>
+    [...document.querySelectorAll('[data-reveal]')]
+      .filter((el) => parseFloat(getComputedStyle(el).opacity) < 0.99)
+      .map((el) => String(el.className).trim().slice(0, 24) || el.tagName)
+  );
+
+/*
+ * 드러나 있어야 하는데 흐린 요소들.
+ *
+ * "화면에 조금이라도 걸쳤으면" 이 아니라 **"드러나기 기준선을 넘었으면"** 을
+ * 본다. scrollReveal 은 요소가 화면 바닥에서 10% 올라온 뒤에 드러내므로,
+ * 맨 아래 10% 띠는 아직 들어오는 중인 구간이다. 거기서 흐린 것은 결함이
+ * 아니라 효과 자체다.
+ *
+ * 그 위쪽 — 실제로 읽는 영역 — 에서 흐린 것이 있으면 결함이다.
+ */
+const fadedAfterCue = (target) =>
+  target.evaluate(() =>
+    [...document.querySelectorAll('[data-reveal]')]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        const pastCue = r.bottom > 0 && r.top < window.innerHeight * 0.9;
+        return pastCue && parseFloat(getComputedStyle(el).opacity) < 0.99;
+      })
+      .map((el) => String(el.className).trim().slice(0, 24) || el.tagName)
+  );
+
+/*
+ * 전환이 끝나기를 기다리는 시간.
+ * opacity/transform 이 560ms, 묶음 안에서 최대 3단계 × 80ms 만큼 늦춰진다.
+ * 진행 중인 값을 재면 당연히 중간이라 판정이 흔들린다.
+ */
+const SETTLE_MS = 900;
+
+test('스크롤을 내리는 동안 모든 서사 요소가 한 번씩 드러난다', async () => {
+  // 오르내릴 때마다 다시 나타나는 방식이라, 특정 시점에 무엇이 숨어 있는지는
+  // 의미가 없다 — 맨 아래에서 위쪽 문단이 되돌아가 있는 것은 의도한 동작이다.
+  // 대신 훑고 지나가는 동안 **모든 요소가 적어도 한 번은 드러났는지** 본다.
+  // 하나라도 끝내 드러나지 않으면 그 문단은 영영 읽을 수 없다.
+  const total = await page.evaluate(() => document.querySelectorAll('[data-reveal]').length);
+  assert.ok(total > 0, '드러낼 대상이 하나도 없다 — 표시가 빠졌다');
+
+  const everRevealed = new Array(total).fill(false);
+  const height = await page.evaluate(() => document.body.scrollHeight);
+
+  for (let y = 0; y < height; y += 400) {
+    await page.evaluate((to) => window.scrollTo(0, to), y);
+    await page.waitForTimeout(180);
+    const now = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-reveal]')].map((el) => el.classList.contains('is-revealed'))
+    );
+    now.forEach((on, i) => { if (on) everRevealed[i] = true; });
+  }
+
+  const never = everRevealed
+    .map((seen, i) => (seen ? null : i))
+    .filter((i) => i !== null);
+  assert.deepEqual(never, [], `끝까지 훑었는데 한 번도 드러나지 않은 요소가 있다: ${never.join(', ')}번째`);
+});
+
+test('스크롤하는 내내 읽는 영역의 글이 흐려지지 않는다', async () => {
+  // 나타나는 기준과 사라지는 기준이 같으면 그 경계에서 보고 있는 글이
+  // 눈앞에서 흐려진다. 아래로 훑고 위로 훑으며 매 지점에서 확인한다.
+  // 이 검사가 두 기준을 분리해 둔 이유 자체를 지킨다.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(SETTLE_MS);
+
+  const height = await page.evaluate(() => document.body.scrollHeight);
+  const stops = [];
+  for (let y = 0; y < height; y += 700) stops.push(y);
+
+  const problems = [];
+  for (const dir of ['down', 'up']) {
+    for (const y of dir === 'down' ? stops : [...stops].reverse()) {
+      await page.evaluate((to) => window.scrollTo(0, to), y);
+      await page.waitForTimeout(SETTLE_MS);
+      const faded = await fadedAfterCue(page);
+      if (faded.length) problems.push(`${dir} @${y}px — ${faded.join(', ')}`);
+    }
+  }
+  assert.deepEqual(problems, [], `드러났어야 하는데 흐린 지점:\n  ${problems.join('\n  ')}`);
+});
+
+test('동작 줄이기에서는 처음부터 다 보인다', async () => {
+  // 표시(data-reveal-ready)를 붙이지 않으므로 숨기는 규칙 자체가 걸리지
+  // 않아야 한다. 여기서 흐린 것이 있으면 그 사용자는 본문을 못 본다.
+  const calm = await browser.newPage({
+    viewport: { width: 1440, height: 1000 },
+    reducedMotion: 'reduce',
+  });
+  try {
+    await calm.goto(server.url, { waitUntil: 'networkidle' });
+    await calm.waitForSelector('canvas');
+    await calm.waitForTimeout(400);
+    assert.equal(
+      await calm.evaluate(() => document.documentElement.hasAttribute('data-reveal-ready')),
+      false,
+      '동작 줄이기인데 드러내기가 켜졌다'
+    );
+    const left = await stillHidden(calm);
+    assert.deepEqual(left, [], `동작 줄이기에서 흐린 채 남은 것이 있다: ${left.join(', ')}`);
+  } finally {
+    await calm.close();
+  }
+});
+
 test('첫 화면의 주 행동은 하나다', async () => {
   // 예전에는 Hero 버튼과 Scanner CTA 가 둘 다 '바로 짤 만들기' 라고 적혀
   // 있고 색까지 같아서, 무엇이 다른지 화면에서 알 수 없었다.
   // 채워진 버튼은 시대를 고르는 쪽 하나여야 한다.
+  //
+  // 재기 전에 마우스를 치운다. hover 한 버튼은 강조색으로 채워지는 것이
+  // 정상인데, 앞선 검사가 눌러 둔 자리에 커서가 남아 있으면 그것까지
+  // '채워진 버튼' 으로 세어 이 검사가 실행 순서에 따라 흔들린다.
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(200);
+
   const filled = await page.locator('.masthead button').evaluateAll((buttons) =>
     buttons
       .filter((button) => {

@@ -18,6 +18,7 @@ import {
   canUndo as historyCanUndo,
   canRedo as historyCanRedo,
 } from './state/history.js';
+import { startScrollReveal } from './scrollReveal.js';
 import { buildShareUrl, readShareUrl, copyToClipboard } from './io/shareLink.js';
 import { downloadTemplatesJson, readTemplatesFile } from './io/templateFile.js';
 import { loadTemplates, saveTemplates } from './templates/storage.js';
@@ -171,6 +172,9 @@ export default function App() {
     setTemplates(stored);
     if (warning) setNotice({ type: 'error', text: warning });
   }, []);
+
+  // 서사 요소를 스크롤에 따라 드러낸다. 첫 화면과 편집 패널은 대상이 아니다.
+  useEffect(() => startScrollReveal(), []);
 
   const update = useCallback((patch) => {
     setState((prev) => clampState({ ...prev, ...patch }));
@@ -643,15 +647,15 @@ export default function App() {
         </div>
       </header>
 
-      <p className="privacy-note">
+      <p className="privacy-note" data-reveal>
         <strong>내 이미지는 내 브라우저에만.</strong>
         {' '}업로드한 이미지는 외부로 전송되지 않고, 템플릿도 이 기기에만 저장됩니다.
         공개할 카드에는 개인정보를 넣지 마세요.
       </p>
 
       <section className="project-story" aria-labelledby="story-heading">
-        <div className="story-index" aria-hidden="true">02 / WHY<br />THESE<br />ERAS</div>
-        <div className="story-main">
+        <div className="story-index" data-reveal aria-hidden="true">02 / WHY<br />THESE<br />ERAS</div>
+        <div className="story-main" data-reveal style={{ '--reveal-order': 1 }}>
           <p className="story-kicker">DIGITAL IDENTITY THROUGH TIME</p>
           <h2 id="story-heading">
             우리는 같은 사람이어도,<br />시대에 따라 다른 모습으로 기억됩니다.
@@ -664,15 +668,15 @@ export default function App() {
           </p>
         </div>
         <div className="story-note">
-          <div className="story-era">
+          <div className="story-era" data-reveal style={{ '--reveal-order': 1 }}>
             <span>01 — MEMORY</span>
             <p>개인 공간을 꾸미고 감정을 기록하던 2004년.</p>
           </div>
-          <div className="story-era">
+          <div className="story-era" data-reveal style={{ '--reveal-order': 2 }}>
             <span>02 — FEED</span>
             <p>사진 한 장으로 일상을 공유하기 시작한 2012년.</p>
           </div>
-          <div className="story-era">
+          <div className="story-era" data-reveal style={{ '--reveal-order': 3 }}>
             <span>03 — SIGNAL</span>
             <p>짧고 선명한 장면으로 나를 증명하는 2026년.</p>
           </div>
@@ -680,11 +684,11 @@ export default function App() {
       </section>
 
       <section className="identity-archive" aria-labelledby="identity-heading">
-        <div className="archive-heading">
+        <div className="archive-heading" data-reveal>
           <p>03 / THREE IDENTITIES</p>
           <h2 id="identity-heading">한 순간이 지나온<br />세 개의 디지털 자아.</h2>
         </div>
-        <figure className="archive-banner">
+        <figure className="archive-banner" data-reveal style={{ '--reveal-order': 1 }}>
           <img
             src={identityBanner}
             alt="같은 인물을 개인 웹 2004, 소셜 피드 2012, 숏폼 2026의 모습으로 나란히 표현한 ALTER EGO 타임라인"
@@ -704,7 +708,7 @@ export default function App() {
         )}
       </div>
 
-      <div className="studio-intro" id="studio">
+      <div className="studio-intro" id="studio" data-reveal>
         <p>04 / THE STUDIO</p>
         <h2>시간선을 선택하고,<br />지금의 나를 다시 디자인하세요.</h2>
         <span>사진은 서버로 전송되지 않습니다.</span>
