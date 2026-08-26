@@ -1,16 +1,33 @@
-# 또 다른 나 — 하나의 순간, 여러 개의 나 (SKT ALEPH T03)
+# ALTER / EGO — Time-Travel Identity Studio
 
-같은 사진과 같은 문구를 누구에게 보여주느냐, 어느 시대의 인터넷 문법으로
-보여주느냐에 따라 다르게 표현하는 카드 스튜디오입니다.
-모든 처리는 브라우저 안에서만 이루어지며, 고른 이미지는 어디에도 전송하지 않습니다.
+같은 사진을 2004·2012·2026의 인터넷 문법으로 다시 기록하는 인터랙티브 카드 스튜디오입니다.
+시간 경계를 직접 움직여 세 시대의 다른 정체성을 탐색하고, 선택한 장면을 나만의 카드로
+완성할 수 있습니다. 모든 처리는 브라우저 안에서만 이루어지며 이미지는 서버로 전송되지 않습니다.
 
-**공개 주소 — https://myeongjundev.github.io/t03-card-studio/**
+**[Live Demo](https://myeongjundev.github.io/t03-card-studio/)**
+
+![ALTER EGO — one photo, three eras, three identities](./배너이미지/짤스튜디오배너.png)
+
+## Signature Experience
+
+- **Temporal Scanner** — 사진 위의 경계선을 드래그해 두 시대를 한 프레임에서 비교합니다.
+- **Three Eras** — 2004 미니홈피, 2012 소셜 피드, 2026 실시간 숏폼의 시각 문법을 재현합니다.
+- **Three Identities** — 기본, 소셜, 친한 친구에게 보이는 나를 서로 다른 레이아웃으로 설계합니다.
+- **Local-first Canvas** — 업로드 이미지, 편집 상태, PNG 생성이 브라우저 밖으로 나가지 않습니다.
+- **One rendering truth** — 화면 미리보기와 다운로드가 같은 Canvas를 사용해 픽셀 차이가 없습니다.
 
 ## 실행
 
 ```bash
 npm install
 npm run dev
+```
+
+Windows PowerShell에서 실행 정책 오류가 발생하면 `npm` 대신 `npm.cmd`를 사용합니다.
+
+```powershell
+npm.cmd install
+npm.cmd run dev
 ```
 
 빌드는 `npm run build`, 결과 확인은 `npm run preview` 입니다.
@@ -31,6 +48,9 @@ e2e 를 처음 돌릴 때는 `npx playwright install chromium` 이 한 번 필�
 
 ## 기능
 
+- **시대를 직접 가르는 첫 화면** — 포인터·터치·방향키로 2004·2012·2026을 탐색하고 Studio에 연결
+- **작품으로 보기** — 편집 UI를 숨기고 결과를 독립된 전시 화면으로 확인
+- **모바일 빠른 시작** — 시대 선택 후 결과 미리보기로 바로 이동하고 편집 중 플로팅 미리보기 지원
 - 이미지 불러오기 (PNG · JPEG), `가득 채우기` / `전체 보이기`
 - 문구 입력과 위치 · 크기 · 색상 · 줄 간격 · 정렬 조절, 즉시 미리보기 반영
 - 1:1 (1080×1080) · 4:5 (1080×1350) · 9:16 (1080×1920)
@@ -63,10 +83,18 @@ e2e 를 처음 돌릴 때는 `npx playwright install chromium` 이 한 번 필�
 `파일 읽기 → 파싱 → 구조 → 필수 항목 → 타입 → 값 범위 → 전부 통과 → 저장` 순서이며,
 검증 함수(`src/templates/schema.js`)는 저장소에 접근조차 하지 않는 순수 함수입니다.
 
+## 성능
+
+- Hero와 Identity Archive의 원본 PNG는 보존합니다.
+- 실제 앱은 AVIF 파생본을 사용해 두 배너의 전송 크기를 약 **3.8MB → 138KB**로 줄였습니다.
+- 2004 이미지 보정은 이미지와 변형 조건별로 캐시해 문구 편집 때 같은 필터를 반복하지 않습니다.
+
 ## 문서
 
 - [검증 안내서](docs/VERIFICATION.md) — 30초 확인 절차
 - [구현 설계](docs/ARCHITECTURE.md) — 데이터 흐름과 렌더링 구조
+- [포트폴리오 사례 요약](docs/PORTFOLIO-CASE-STUDY.md) — 문제, 판단, 결과, 면접 설명
+- [작업 인수인계](work-log/HANDOFF-2026-08-25.md) — 로컬 실행과 다음 작업 우선순위
 - [극단 입력 검사표](docs/TEST-EDGE-CASES.md) — 12개 검사 결과와 대표 결함 수정 기록
 - [자체 점검 자료](docs/SELF-CHECK.md) — 배포본에서 측정한 전체 검증 기록
 
@@ -78,7 +106,7 @@ src/
   render/     렌더러 (renderCard / wrapText / fitImage)
   templates/  검증(schema)과 localStorage(storage)
   io/         이미지 내보내기, 템플릿 JSON 입출력
-  components/ 편집 · 미리보기 · 템플릿 패널
+  components/ Temporal Scanner · 편집 · 미리보기 · 템플릿 패널
 scripts/      검사용 이미지 생성, 렌더 스냅샷 갱신, 브라우저 측정 스크립트
 test/         단위 테스트와 렌더 회귀 스냅샷(fixtures/)
 docs/         설계 · 검사표 · 검증 안내서 · 완성 이미지

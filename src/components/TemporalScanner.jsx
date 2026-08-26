@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import timelinePortrait from '../../배너이미지/짤스튜디오.png';
+import timelinePortrait from '../../배너이미지/짤스튜디오.avif';
 
 const STOPS = [
   {

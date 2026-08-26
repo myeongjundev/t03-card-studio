@@ -26,7 +26,7 @@ import EditorPanel from './components/EditorPanel.jsx';
 import PreviewPanel from './components/PreviewPanel.jsx';
 import TemplatePanel from './components/TemplatePanel.jsx';
 import TemporalScanner from './components/TemporalScanner.jsx';
-import identityBanner from '../배너이미지/짤스튜디오배너.png';
+import identityBanner from '../배너이미지/짤스튜디오배너.avif';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
 
