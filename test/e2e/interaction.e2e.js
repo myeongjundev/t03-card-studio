@@ -1,0 +1,176 @@
+import test, { before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
+import { startDistServer } from './server.js';
+
+/**
+ * 조작 회귀 검사.
+ *
+ * 여기 있는 것은 전부 **실제로 배포된 적이 있는 결함**이다. 둘 다 렌더러는
+ * 멀쩡했고 단위 테스트도 전부 통과했다. 픽셀이 아니라 "사람이 실제로 하는
+ * 동작"에서만 드러나는 종류라, 진짜 브라우저에서 진짜 입력을 보내야 잡힌다.
+ *
+ * pixels.e2e.js 와 페이지를 공유하지 않는다. 저쪽 검사들이 시대·비율·이미지를
+ * 바꿔 두기 때문에, 초기 상태에 의존하는 이 검사들이 실행 순서에 따라
+ * 흔들리게 된다.
+ */
+
+const STOP_YEARS = ['2004', '2012', '2026'];
+
+let server;
+let browser;
+let page;
+
+before(async () => {
+  server = await startDistServer();
+  browser = await chromium.launch();
+  page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(server.url, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.scanner-frame');
+});
+
+after(async () => {
+  await browser?.close();
+  await server?.close();
+});
+
+test('방향키를 눌렀다 떼도 Scanner 가 그 자리에 남는다', async () => {
+  // 배포된 결함: onKeyUp 에도 스냅이 걸려 있어서, 화살표 한 번의 이동량
+  // (0.025)보다 스냅의 흡인 범위가 훨씬 넓었다. 키를 누르고 있을 때만
+  // 움직이고 떼는 순간 원래 정지점으로 되돌아갔다 — 즉 **화살표를 눌렀다
+  // 떼면 아무 일도 일어나지 않았다.**
+  //
+  // press() 는 keydown 과 keyup 을 함께 보낸다. 사람이 키를 톡톡 누르는
+  // 것과 같고, 바로 그 동작이 망가져 있었다. 예전 검사가 Home 만 눌러
+  // 봤기 때문에 이 결함이 통과해 버렸다 — Home 의 목적지(2004)는 그
+  // 자체가 정지점이라 스냅되어도 값이 같았다.
+  const scanner = page.locator('.scanner-frame');
+  await scanner.focus();
+
+  const before = await scanner.getAttribute('aria-valuenow');
+  assert.equal(before, '2026', '첫 상태가 2026 이 아니다');
+
+  for (let i = 0; i < 4; i += 1) await scanner.press('ArrowLeft');
+  await page.waitForTimeout(120);
+
+  const after = await scanner.getAttribute('aria-valuenow');
+  assert.notEqual(after, before, '방향키를 눌렀다 뗐는데 값이 그대로다');
+  assert.ok(Number(after) < Number(before), `왼쪽 방향키인데 연도가 늘었다: ${before} → ${after}`);
+
+  // 핵심은 "움직였다" 가 아니라 **"정지점 사이에 머물렀다"** 이다.
+  // role="slider" 를 선언한 이상 키보드로도 중간 위치를 잡을 수 있어야 한다.
+  assert.ok(
+    !STOP_YEARS.includes(after),
+    `키를 뗀 뒤 정지점으로 되돌아갔다(${after}). onKeyUp 스냅이 살아 있다.`
+  );
+
+  // 반대 방향도 같은 규칙을 따른다.
+  await scanner.press('ArrowRight');
+  await page.waitForTimeout(120);
+  const back = await scanner.getAttribute('aria-valuenow');
+  assert.ok(Number(back) > Number(after), `오른쪽 방향키인데 연도가 줄었다: ${after} → ${back}`);
+});
+
+test('Home 과 End 는 양 끝 시대로 간다', async () => {
+  const scanner = page.locator('.scanner-frame');
+  await scanner.focus();
+
+  await scanner.press('Home');
+  await page.waitForTimeout(120);
+  assert.equal(await scanner.getAttribute('aria-valuenow'), '2004', 'Home 이 2004 로 가지 않았다');
+
+  await scanner.press('End');
+  await page.waitForTimeout(120);
+  assert.equal(await scanner.getAttribute('aria-valuenow'), '2026', 'End 가 2026 으로 가지 않았다');
+});
+
+test('초점이 떠나면 가장 가까운 시대로 정리된다', async () => {
+  // 스냅 자체를 없앤 것이 아니다. 조작이 끝나는 시점 — 초점이 떠날 때와
+  // 포인터를 놓을 때 — 에는 여전히 정지점으로 모인다. 그래야 CTA 가
+  // 무엇을 적용할지가 분명해진다.
+  const scanner = page.locator('.scanner-frame');
+  await scanner.focus();
+  await scanner.press('Home');
+  for (let i = 0; i < 3; i += 1) await scanner.press('ArrowRight');
+  await page.waitForTimeout(120);
+
+  const parked = await scanner.getAttribute('aria-valuenow');
+  assert.ok(!STOP_YEARS.includes(parked), `중간에 머물러야 하는데 정지점이다: ${parked}`);
+
+  await scanner.blur();
+  await page.waitForTimeout(450);
+  assert.ok(
+    STOP_YEARS.includes(await scanner.getAttribute('aria-valuenow')),
+    '초점이 떠났는데 정지점으로 정리되지 않았다'
+  );
+});
+
+test('페이지 안에서 이동해도 공유 링크가 주소에 남는다', async () => {
+  // 배포된 결함: 워드마크가 `<a href="#top">` 이라 클릭하면 주소의 해시를
+  // #top 으로 덮어썼다. 방금 만든 #card= 가 소리 없이 사라진다.
+  //
+  // 하필 클립보드가 막힌 환경에서 앱이 안내하는 대안이 "주소창의 주소를
+  // 직접 복사해 주세요" 다. 그 주소를 앱이 스스로 날리고 있었다.
+  await page.locator('#text-input').fill('오늘도 무사히');
+  await page.getByRole('button', { name: '링크 복사' }).click();
+  await page.waitForTimeout(300);
+
+  const shared = await page.evaluate(() => location.hash);
+  assert.ok(shared.startsWith('#card='), `공유 링크가 주소에 실리지 않았다: ${shared}`);
+
+  await page.getByRole('button', { name: 'Alter Ego 처음으로' }).click();
+  await page.waitForTimeout(400);
+  assert.equal(
+    await page.evaluate(() => location.hash),
+    shared,
+    '워드마크를 눌렀더니 공유 상태가 사라졌다'
+  );
+
+  await page.getByRole('button', { name: /제작 도구로/ }).click();
+  await page.waitForTimeout(400);
+  assert.equal(
+    await page.evaluate(() => location.hash),
+    shared,
+    '제작 도구로 이동했더니 공유 상태가 사라졌다'
+  );
+
+  // 구조적 방어. 페이지 안 이동을 해시 앵커로 되돌리면 같은 결함이 다시 난다.
+  assert.equal(
+    await page.locator('a[href^="#"]').count(),
+    0,
+    '페이지 안 이동에 해시 앵커가 다시 생겼다 — 공유 상태를 덮어쓴다'
+  );
+
+  // 실제로 열리는 링크인지까지 확인한다. 주소만 맞고 복원이 안 되면 소용없다.
+  const reopened = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await reopened.goto(server.url + shared, { waitUntil: 'networkidle' });
+    await reopened.waitForSelector('canvas');
+    assert.equal(
+      await reopened.locator('#text-input').inputValue(),
+      '오늘도 무사히',
+      '공유 링크를 열었는데 문구가 복원되지 않았다'
+    );
+  } finally {
+    await reopened.close();
+  }
+});
+
+test('첫 화면의 주 행동은 하나다', async () => {
+  // 예전에는 Hero 버튼과 Scanner CTA 가 둘 다 '바로 짤 만들기' 라고 적혀
+  // 있고 색까지 같아서, 무엇이 다른지 화면에서 알 수 없었다.
+  // 채워진 버튼은 시대를 고르는 쪽 하나여야 한다.
+  const filled = await page.locator('.masthead button').evaluateAll((buttons) =>
+    buttons
+      .filter((button) => {
+        const parts = getComputedStyle(button).backgroundColor.match(/[\d.]+/g).map(Number);
+        const opaque = parts.length < 4 || parts[3] > 0.9;
+        const pale = parts[0] > 235 && parts[1] > 235 && parts[2] > 235;
+        return opaque && !pale;
+      })
+      .map((button) => button.innerText.replace(/\s+/g, ' ').trim())
+  );
+
+  assert.equal(filled.length, 1, `첫 화면에 채워진 버튼이 ${filled.length}개다: ${filled.join(' / ')}`);
+  assert.match(filled[0], /짤 만들기/, `주 행동이 시대 진입 CTA 가 아니다: ${filled[0]}`);
+});
