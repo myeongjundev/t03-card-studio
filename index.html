@@ -11,11 +11,33 @@
     <meta name="theme-color" content="#fdf0e7" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="ko_KR" />
+    <meta property="og:site_name" content="ALTER / EGO" />
     <meta property="og:title" content="ALTER / EGO — Time-Travel Identity Studio" />
     <meta
       property="og:description"
       content="한 장의 사진, 세 개의 시대, 세 개의 디지털 자아를 직접 탐색하고 디자인하세요."
     />
+    <!--
+      링크 미리보기 카드.
+
+      og:url 과 og:image 는 절대 주소여야 한다. 크롤러는 이 문서를 어디서
+      읽었는지 모르는 채로 값을 그대로 쓰기 때문에, 다른 곳에 배포하면
+      이 두 줄을 함께 고쳐야 한다.
+
+      형식은 JPEG 다. 앱 자체는 AVIF 를 쓰지만 링크를 펼치는 쪽은 브라우저가
+      아니라 각 서비스의 크롤러이고, 그중에는 AVIF/WebP 를 아직 못 읽는 곳이
+      있다. 미리보기가 비어 보이는 것보다 54KB 를 더 쓰는 편이 낫다.
+    -->
+    <meta property="og:url" content="https://myeongjundev.github.io/t03-card-studio/" />
+    <meta property="og:image" content="https://myeongjundev.github.io/t03-card-studio/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="'같은 사진. 다른 시대. 다른 나.' 문장과, 같은 바닷가 사진이 2004 미니홈피 · 2012 필름 · 2026 숏폼으로 각각 달라진 카드 세 장."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

@@ -10,12 +10,19 @@ import { fileURLToPath } from 'node:url';
 
 const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dist');
 
+// 실제 정적 호스트를 흉내 내는 서버이므로 dist 에 실리는 형식은 다 적어 둔다.
+// 빠뜨리면 application/octet-stream 으로 나가서, 배포에서는 멀쩡한 것이
+// 검사에서만 다르게 동작할 수 있다.
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.avif': 'image/avif',
+  '.webp': 'image/webp',
   '.json': 'application/json; charset=utf-8',
 };
 
