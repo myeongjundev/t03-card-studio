@@ -1057,6 +1057,12 @@ html { scroll-behavior: smooth; }
 }
 .scanner-readout small { color: var(--scanner-accent); }
 .scanner-frame {
+  /*
+    시대 경계를 끌 때 프레임 안의 글자가 함께 선택되지 않게 한다.
+    선택되면 라벨마다 강조색 하이라이트가 깔려 화면이 망가진 것처럼 보인다.
+    끄는 조작이 있는 영역이라 글자를 집어갈 이유도 없다.
+  */
+  user-select: none;
   grid-column: 1;
   position: relative;
   justify-self: center;
