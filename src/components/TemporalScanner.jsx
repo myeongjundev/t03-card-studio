@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import timelinePortrait from '../../배너이미지/짤스튜디오.avif';
 
 const STOPS = [
@@ -50,7 +50,6 @@ export default function TemporalScanner({ onEnterEra }) {
   const [progress, setProgress] = useState(1);
   const [dragging, setDragging] = useState(false);
   const [locked, setLocked] = useState(true);
-  const scannerRef = useRef(null);
   const selected = nearestStop(progress);
   const year = continuousYear(progress);
   const phase = progress <= 0.5 ? 0 : 1;
@@ -94,6 +93,17 @@ export default function TemporalScanner({ onEnterEra }) {
     moveToPointer(event);
   };
 
+  /**
+   * 방향키 조작.
+   *
+   * 예전에는 keyUp 에도 snap 을 걸어 두었는데, 화살표 한 번의 이동량(0.025)
+   * 보다 스냅의 흡인 범위가 훨씬 넓어서 키를 떼는 순간 값이 원래 정지점으로
+   * 되돌아갔다. 즉 **화살표를 눌렀다 떼면 아무 일도 일어나지 않았다** —
+   * 키를 누르고 있을 때만 움직이고 놓으면 제자리였다.
+   *
+   * role="slider" 를 선언한 이상 키보드로도 정지점 사이에 머무를 수 있어야
+   * 한다. 스냅은 포인터 조작이 끝날 때와 초점이 떠날 때만 건다.
+   */
   const handleKeyDown = (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
@@ -118,7 +128,6 @@ export default function TemporalScanner({ onEnterEra }) {
       </div>
 
       <div
-        ref={scannerRef}
         className="scanner-frame"
         style={style}
         role="slider"
@@ -133,7 +142,6 @@ export default function TemporalScanner({ onEnterEra }) {
         onPointerUp={snap}
         onPointerCancel={snap}
         onKeyDown={handleKeyDown}
-        onKeyUp={snap}
         onBlur={snap}
       >
         <div className={`scanner-era scanner-era-2004 ${phase === 0 ? 'is-base' : 'is-hidden'}`} aria-hidden="true">

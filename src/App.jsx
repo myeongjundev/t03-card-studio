@@ -500,13 +500,38 @@ export default function App() {
       const target = window.matchMedia('(max-width: 1100px)').matches
         ? document.querySelector('.panel-preview')
         : document.getElementById('studio');
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target?.scrollIntoView({
+        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+        block: 'start',
+      });
     });
   }, []);
 
-  /** URL의 #card 공유 상태를 보존하면서 제작 도구로만 이동한다. */
+  /**
+   * 스크롤 이동은 전부 이 두 함수를 거친다.
+   *
+   * `<a href="#studio">` 같은 앵커를 쓰지 않는 이유는, 앵커가 주소의 해시를
+   * 덮어써서 방금 만든 `#card=` 공유 상태를 지워 버리기 때문이다. 클립보드가
+   * 막힌 환경에서는 "주소창의 주소를 직접 복사해 주세요" 가 유일한 대안인데,
+   * 그 주소를 앱이 스스로 날리면 안 된다.
+   *
+   * behavior 를 조건부로 넘기는 이유는 CSS 의 scroll-behavior 규칙이
+   * JS 인자에 밀리기 때문이다. 동작 줄이기를 켠 사용자에게는 6,000px 이 넘는
+   * 문서를 부드럽게 훑고 내려가는 것이 그대로 남는다.
+   */
+  const scrollBehavior = () =>
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
+  }, []);
+
   const scrollToStudio = useCallback(() => {
-    document.getElementById('studio')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document
+      .getElementById('studio')
+      ?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
   }, []);
 
   /** 이미지를 클립보드에 넣는다. 대화창에 바로 붙여넣기 위한 것이다. */
@@ -548,10 +573,17 @@ export default function App() {
     <div className={`app era-${state.era}`}>
       <header className="masthead">
         <nav className="top-nav" aria-label="주요 메뉴">
-          <a className="wordmark" href="#top" aria-label="Alter Ego 처음으로">A/E</a>
+          <button
+            type="button"
+            className="wordmark"
+            onClick={scrollToTop}
+            aria-label="Alter Ego 처음으로"
+          >
+            A/E
+          </button>
           <span>TIME-TRAVEL ID STUDIO</span>
           <button type="button" className="nav-studio-button" onClick={scrollToStudio}>
-            바로 만들기 ↘
+            제작 도구로 ↘
           </button>
         </nav>
 
@@ -563,11 +595,17 @@ export default function App() {
               한 장의 사진을 2004, 2012, 2026의 방식으로 다시 기록합니다.
               선을 움직여 시간 속의 다른 나를 먼저 만나보세요.
             </p>
+            {/*
+              첫 화면의 주 행동은 Scanner 의 'ENTER ERA' 하나다. 예전에는 이
+              버튼도 '바로 짤 만들기' 라고 적혀 있어서 두 버튼이 같은 말을 하고
+              같은 색이었고, 무엇이 다른지 화면에서 알 수 없었다. 여기는
+              시대를 고르지 않고 건너뛰는 길이므로 그렇게 적고, 색도 낮춘다.
+            */}
             <div className="hero-actions">
               <button type="button" className="hero-make-button" onClick={scrollToStudio}>
-                <span>바로 짤 만들기</span><b aria-hidden="true">↓</b>
+                <span>시대 없이 바로 시작</span><b aria-hidden="true">↓</b>
               </button>
-              <span>또는 오른쪽에서 시대를 먼저 탐색하세요.</span>
+              <span>시대를 고르면 사진 화질과 기록 문법까지 함께 바뀝니다.</span>
             </div>
           </div>
 

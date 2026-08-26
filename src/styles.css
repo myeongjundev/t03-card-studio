@@ -1,14 +1,35 @@
+/*
+  색 토큰.
+
+  강조색은 어두운 배경 시절 값(#67bce5)을 그대로 쓰다가, 배경이 아이보리로
+  바뀐 뒤 밝은 면 위에서 2.0:1 남짓밖에 나오지 않았다. 알림·게시 전 확인·
+  선택된 시대 캡션·패널 번호처럼 **상태를 알리는 것들**이 하필 전부 이 색을
+  쓰고 있어서, 가장 읽혀야 할 글자가 가장 안 읽혔다.
+
+  그래서 세 가지를 한꺼번에 뒤집는다.
+
+  1. --accent 를 어둡게 내린다. 글자로 쓰면 4.9~5.5:1, 면으로 쓰면 흰 글자가
+     5.6:1, 포커스 링으로 쓰면 4.9:1 이다. 세 용도가 모두 기준을 넘는다.
+  2. --accent-ink 를 뒤집는다. 강조색 면 위에 얹히는 글자라, 강조색이
+     어두워지면 이 값도 함께 밝아져야 한다.
+  3. --line 을 둘로 나눈다. 입력·버튼 같은 **조작 가능한** 경계는 3:1 이
+     필요한데(WCAG 1.4.11) 기존 값은 1.51:1 이었다. 장식용 얇은 선은
+     대비 요건이 없으므로 --line 에 남겨 둔다.
+*/
 :root {
   --bg: #f5f0e6;
   --panel: #fffdf7;
   --panel-2: #edf7fb;
+  /* 장식용 얇은 선 — 정보를 전달하지 않으므로 대비 요건 없음 */
   --line: #bfd4df;
+  /* 조작 가능한 컨트롤의 경계 — 패널 대비 3.13:1 */
+  --edge: #6e96aa;
   --text: #183247;
   --muted: #526f80;
-  --accent: #67bce5;
-  --accent-ink: #0d3448;
-  --danger: #d95c72;
-  --ok: #2e9c7a;
+  --accent: #176f98;
+  --accent-ink: #ffffff;
+  --danger: #c1435c;
+  --ok: #1e7a5e;
   --radius: 18px;
 }
 
@@ -137,7 +158,7 @@ select {
   width: 100%;
   padding: 8px 10px;
   background: var(--panel-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   border-radius: 8px;
   color: var(--text);
   font-family: inherit;
@@ -149,7 +170,7 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 input[type='color'] {
   width: 52px; height: 34px; padding: 2px;
   background: var(--panel-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   border-radius: 8px;
 }
 input[type='file'] { width: 100%; font-size: 13px; color: var(--muted); }
@@ -165,14 +186,18 @@ button {
   font-size: 14px;
   padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--panel-2);
   color: var(--text);
   cursor: pointer;
 }
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:active:not(:disabled) { transform: translateY(1px); }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
+/*
+  opacity 로 흐리면 글자와 배경이 함께 옅어져 왜 못 누르는지 읽히지 않는다
+  (2.02:1 까지 떨어졌다). 색을 직접 지정해 대비를 남긴다.
+*/
+button:disabled { cursor: not-allowed; }
 
 button.primary {
   background: var(--accent);
@@ -310,7 +335,7 @@ button.small { padding: 5px 10px; font-size: 13px; }
   padding: 13px 14px;
   border: 1px solid var(--accent);
   border-radius: 12px;
-  background: rgba(184, 255, 92, 0.055);
+  background: rgba(103, 188, 229, 0.055);
 }
 .quick-start-kicker { margin: 0; color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: 0.12em; }
 .quick-start-title { margin: 2px 0 0; color: var(--text); font-size: 12px; font-weight: 700; }
@@ -541,7 +566,7 @@ button.small { padding: 5px 10px; font-size: 13px; }
 .era-picker {
   padding: 16px;
   border-left: 2px solid var(--accent);
-  background: rgba(184, 255, 92, 0.035);
+  background: rgba(103, 188, 229, 0.035);
 }
 .era-timeline {
   position: relative;
@@ -633,7 +658,7 @@ button.small { padding: 5px 10px; font-size: 13px; }
   white-space: nowrap;
   cursor: pointer;
 }
-.ratio-suggestion:hover { background: rgba(184, 255, 92, 0.12); }
+.ratio-suggestion:hover { background: rgba(103, 188, 229, 0.12); }
 
 /* ── 파일 고르기 ──────────────────────────────────── */
 /*
@@ -649,13 +674,13 @@ button.small { padding: 5px 10px; font-size: 13px; }
   padding: 18px 16px;
   border: 1.5px dashed var(--line);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(184, 255, 92, 0.045), rgba(184, 255, 92, 0.01));
+  background: linear-gradient(180deg, rgba(103, 188, 229, 0.045), rgba(103, 188, 229, 0.01));
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
 .dropzone:hover {
   border-color: var(--accent);
-  background: rgba(184, 255, 92, 0.08);
+  background: rgba(103, 188, 229, 0.08);
 }
 .dropzone:active { transform: scale(0.995); }
 
@@ -663,7 +688,7 @@ button.small { padding: 5px 10px; font-size: 13px; }
 .dropzone.is-dragging {
   border-color: var(--accent);
   border-style: solid;
-  background: rgba(184, 255, 92, 0.16);
+  background: rgba(103, 188, 229, 0.16);
 }
 
 /* input 을 숨기되 키보드 초점은 살려 둔다. 초점이 오면 테두리로 알린다. */
@@ -698,7 +723,7 @@ input[type='file'].dropzone-input {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: rgba(184, 255, 92, 0.12);
+  background: rgba(103, 188, 229, 0.12);
   color: var(--accent);
 }
 .dropzone-icon svg { width: 20px; height: 20px; display: block; }
@@ -762,7 +787,7 @@ input[type='file'].dropzone-input {
 /* 브라우저 기본 삼각형을 지운다. 자체 화살표를 쓴다. */
 .group-head::-webkit-details-marker { display: none; }
 .group-head::marker { content: ''; }
-.group-head:hover { background: rgba(184, 255, 92, 0.06); }
+.group-head:hover { background: rgba(103, 188, 229, 0.06); }
 .group-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .group-title { color: var(--text); font-size: 13px; font-weight: 700; }
@@ -875,7 +900,7 @@ html { scroll-behavior: smooth; }
 }
 .app.era-2004 { --era-glow: #7dd9ff; --era-ghost: rgba(125, 217, 255, 0.14); }
 .app.era-2012 { --era-glow: #ff9ab6; --era-ghost: rgba(255, 154, 182, 0.14); }
-.app.era-2026 { --era-glow: #b8ff5c; --era-ghost: rgba(184, 255, 92, 0.14); }
+.app.era-2026 { --era-glow: #b8ff5c; --era-ghost: rgba(103, 188, 229, 0.14); }
 
 .masthead {
   display: block;
@@ -913,8 +938,21 @@ html { scroll-behavior: smooth; }
   font-weight: 800;
   letter-spacing: .16em;
 }
-.top-nav .wordmark { color: var(--text); font-size: 18px; letter-spacing: -.08em; }
-.top-nav a:last-child { justify-self: end; color: var(--era-glow); }
+/*
+  워드마크는 앵커가 아니라 버튼이다. 앵커였을 때는 클릭이 주소의 해시를
+  #top 으로 덮어써서, 방금 만든 #card= 공유 상태를 지웠다.
+  버튼의 기본 겉모습(테두리·배경·패딩)은 여기서 걷어낸다.
+*/
+.top-nav .wordmark {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 18px;
+  letter-spacing: -.08em;
+  cursor: pointer;
+}
+.top-nav .wordmark:hover:not(:disabled) { border: 0; background: none; color: var(--accent); }
 .top-nav a { text-decoration: none; }
 .nav-studio-button {
   justify-self: end;
@@ -1594,7 +1632,12 @@ html { color-scheme: light; accent-color: var(--accent); }
 .app.era-2004,
 .app.era-2012,
 .app.era-2026 {
-  --era-glow: #55add8;
+  /*
+    --era-glow 는 소개 킥커·아카이브 라벨처럼 9~10px 글자에도 쓰인다.
+    밝은 하늘색(#55add8)은 아이보리 위에서 2.21:1 이었다. 강조색과 같은 값을
+    써서 한 곳에서만 관리한다.
+  */
+  --era-glow: var(--accent);
   --era-ghost: rgba(103, 188, 229, .2);
 }
 
@@ -1621,11 +1664,10 @@ html { color-scheme: light; accent-color: var(--accent); }
 .scanner-readout strong,
 .scanner-selection p { color: var(--text); }
 .nav-studio-button,
-.top-nav a:last-child,
-.masthead .brand-kicker { color: #1b789f; }
+.masthead .brand-kicker { color: var(--accent); }
 .nav-studio-button {
   padding: 9px 13px;
-  border: 1px solid rgba(40,123,166,.3);
+  border: 1px solid var(--edge);
   border-radius: 999px;
   background: rgba(255,255,255,.58);
 }
@@ -1639,18 +1681,23 @@ html { color-scheme: light; accent-color: var(--accent); }
   line-height: .94;
   letter-spacing: -.082em;
 }
-.masthead .hero-copy h1 em { color: #3d9dcc; }
+/* 제목의 마지막 줄. 이전 값(#3d9dcc)은 큰 글자 기준 3:1 에도 못 미치는 2.68:1 이었다. */
+.masthead .hero-copy h1 em { color: var(--accent); }
 .masthead .hero-copy .hero-lead { max-width: 470px; color: #526f80; font-size: 16px; line-height: 1.82; }
+/*
+  건너뛰기 경로라 2차 버튼으로 둔다. 첫 화면에서 채워진 버튼은
+  Scanner 의 'ENTER ERA' 하나뿐이어야 어디를 눌러야 할지 헷갈리지 않는다.
+*/
 .hero-make-button {
   min-width: 250px;
   padding: 17px 20px;
-  border-color: #1b789f;
+  border-color: var(--edge);
   border-radius: 12px;
-  color: #fff;
-  background: #1b789f;
-  box-shadow: 0 12px 30px rgba(27,120,159,.23);
+  color: var(--accent);
+  background: rgba(255, 255, 255, .58);
+  box-shadow: none;
 }
-.hero-make-button:hover:not(:disabled) { border-color: #1b789f; background: #1b789f; }
+.hero-make-button:hover:not(:disabled) { border-color: var(--accent); background: #e7f5fb; }
 
 .temporal-scanner { --scanner-accent: #176f98; }
 .scanner-frame {
@@ -1664,16 +1711,19 @@ html { color-scheme: light; accent-color: var(--accent); }
   box-shadow: 0 28px 70px rgba(43,88,111,.24), 0 0 0 3px rgba(50,152,202,.24);
 }
 .scanner-timeline button::before { background: #fffdf7; }
-.scanner-timeline button.is-current { color: #187eaf; }
+.scanner-timeline button.is-current { color: var(--accent); }
 .scanner-timeline button.is-current::before { background: #176f98; box-shadow: 0 0 0 5px rgba(50,152,202,.14); }
 .scanner-selection { padding: 18px; border: 1px solid rgba(85,144,173,.25); border-radius: 14px; background: rgba(255,255,255,.58); }
+/* 첫 화면의 유일한 주 행동. 채워진 버튼은 이것 하나뿐이다. */
 .scanner-enter {
-  border-color: #176f98;
+  border-color: var(--accent);
   border-radius: 10px;
-  color: #176f98;
-  background: #e6f5fb;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(23, 111, 152, .22);
 }
-.scanner-enter:hover:not(:disabled) { color: #fff; background: #1b789f; }
+.scanner-enter:hover:not(:disabled) { color: #fff; background: #135b7d; border-color: #135b7d; }
 
 .privacy-note {
   margin: 18px 0 34px;
@@ -1777,25 +1827,38 @@ html { color-scheme: light; accent-color: var(--accent); }
 .panel-preview { box-shadow: 0 24px 64px rgba(52,99,122,.13); }
 .canvas-stage { border-color: #c2d6df; border-radius: 16px; background: #e7f3f8; }
 
+/*
+  1.4.11 은 '조작 가능한 것'의 경계에만 3:1 을 요구한다. 입력·선택·접이식
+  묶음(summary 가 컨트롤이다)은 --edge 를 쓰고, 목록 항목이나 파일 이름처럼
+  읽기만 하는 것은 --line 으로 가볍게 둔다. 전부 진하게 만들면 화면이
+  필요 이상으로 무거워진다.
+*/
 input,
 textarea,
 select,
 .segmented,
-.group,
-.template-item,
-.file-current {
-  border-color: #c4d8e1;
+.group {
+  border-color: var(--edge);
   color: var(--text);
   background: #f8fcfd;
 }
+.template-item,
+.file-current {
+  border-color: var(--line);
+  color: var(--text);
+  background: #f8fcfd;
+}
+/* 입력 안내 문구도 읽혀야 한다. 이전 값(#8ba1ad)은 2.61:1 이었다. */
 input::placeholder,
-textarea::placeholder { color: #8ba1ad; }
+textarea::placeholder { color: #57707d; }
 
 button { border-radius: 10px; color: var(--text); background: #f8fcfd; }
-button:hover:not(:disabled) { border-color: #7bbbd9; background: #e7f5fb; }
-button.primary { color: #fff; background: #1b789f; border-color: #1b789f; }
-button.primary:hover:not(:disabled) { color: #fff; background: #1b789f; border-color: #1b789f; }
-button:disabled { color: #9cafb8; background: #eef2f2; }
+/* hover 테두리는 강조색을 그대로 쓴다. 밝은 하늘색(#7bbbd9)은 hover 배경 위에서 1.89:1 이었다. */
+button:hover:not(:disabled) { border-color: var(--accent); background: #e7f5fb; }
+button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+button.primary:hover:not(:disabled) { color: #fff; background: var(--accent); border-color: var(--accent); }
+/* 왜 못 누르는지 읽히도록 대비를 남긴다. 이전 값(#9cafb8)은 2.02:1 이었다. */
+button:disabled { color: #5f767d; background: #eef2f2; border-color: #d5dedd; }
 
 .quick-start-guide {
   border-color: rgba(50,152,202,.45);
