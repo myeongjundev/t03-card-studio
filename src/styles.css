@@ -1458,18 +1458,22 @@ select { font-family: var(--font-korean); }
   padding-block: clamp(90px, 11vw, 170px);
   overflow: hidden;
 }
-.project-story::before {
-  content: 'WHY THESE ERAS';
-  position: absolute;
-  right: -1vw;
-  top: -.18em;
-  color: rgba(255,255,255,.025);
-  font-family: var(--font-display);
-  font-size: clamp(90px, 15vw, 240px);
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-  pointer-events: none;
+/* 아래 .identity-archive::before 와 같은 이유로 넓은 화면에서만 그린다. */
+.project-story::before { content: ''; }
+@media (min-width: 900px) {
+  .project-story::before {
+    content: 'WHY THESE ERAS';
+    position: absolute;
+    right: var(--editorial-gutter);
+    top: 0;
+    color: rgba(255,255,255,.025);
+    font-family: var(--font-display);
+    font-size: clamp(56px, 7.5vw, 112px);
+    font-weight: 700;
+    line-height: 1.05;
+    white-space: nowrap;
+    pointer-events: none;
+  }
 }
 .story-index { position: relative; z-index: 1; line-height: 1.35; letter-spacing: .16em; }
 .story-main { position: relative; z-index: 1; }
@@ -1487,24 +1491,38 @@ select { font-family: var(--font-korean); }
 .story-note p { margin: 7px 0 28px; font-size: 13px; line-height: 1.7; }
 
 .identity-archive {
-  grid-template-columns: minmax(260px, .48fr) minmax(620px, 1.52fr);
+  /* 제목 칸이 286px 밖에 안 돼 두세 글자마다 줄이 바뀌었다. 넓혀 준다. */
+  grid-template-columns: minmax(330px, .72fr) minmax(460px, 1.28fr);
   gap: clamp(34px, 5vw, 82px);
   margin: 0;
-  padding-block: clamp(76px, 9vw, 132px);
+  padding-block: clamp(56px, 6vw, 92px);
   overflow: hidden;
   border-inline: 0;
 }
+/*
+  배경 글자는 '들어갈 때만' 넣는다.
+
+  예전에는 clamp(110px, 18vw, 280px) 라 좁은 화면에서 단어가 칸보다 넓어졌고,
+  overflow:hidden 이 잘라서 'IDE' 세 글자만 거대하게 남았다. 장식이 아니라
+  깨진 화면으로 보인다. 폭이 부족한 구간에서는 아예 그리지 않는다.
+*/
 .identity-archive::before {
-  content: 'IDENTITIES';
-  position: absolute;
-  left: var(--editorial-gutter);
-  bottom: -.18em;
-  color: rgba(255,255,255,.025);
-  font-family: var(--font-display);
-  font-size: clamp(110px, 18vw, 280px);
-  font-weight: 700;
-  line-height: 1;
-  pointer-events: none;
+  content: '';
+}
+@media (min-width: 900px) {
+  .identity-archive::before {
+    content: 'IDENTITIES';
+    position: absolute;
+    left: var(--editorial-gutter);
+    bottom: 0;
+    color: rgba(255,255,255,.025);
+    font-family: var(--font-display);
+    font-size: clamp(64px, 9vw, 132px);
+    font-weight: 700;
+    line-height: 1.05;
+    white-space: nowrap;
+    pointer-events: none;
+  }
 }
 .archive-heading { position: relative; z-index: 1; align-self: start; padding-top: 14px; }
 .archive-heading h2 {
@@ -1572,7 +1590,7 @@ button { border-radius: 2px; }
   :root { --editorial-gutter: 16px; }
   .app { padding: 12px; }
   .masthead { padding-inline: 18px; }
-  .masthead .hero-copy h1 { font-size: clamp(50px, 16vw, 70px); line-height: .88; }
+  .masthead .hero-copy h1 { --kr-size: clamp(40px, 12vw, 56px); }
   .masthead .hero-copy .hero-lead { margin-top: 26px; }
   .hero-make-button { width: 100%; }
   .project-story,
@@ -1581,7 +1599,7 @@ button { border-radius: 2px; }
   .story-note { grid-column: 1; }
   .story-main h2,
   .archive-heading h2,
-  .studio-intro h2 { font-size: clamp(40px, 12vw, 58px); }
+  .studio-intro h2 { --kr-size: clamp(27px, 4.4vw, 36px); max-width: none; }
   .story-lead { margin-top: 28px; font-size: 14px; }
   .studio-intro { grid-template-columns: 1fr; padding-block: 68px 26px; }
 }
@@ -1644,11 +1662,14 @@ html { color-scheme: light; accent-color: var(--accent); }
 
 .hero { grid-template-columns: minmax(360px, .82fr) minmax(560px, 1.18fr); }
 .hero-copy { padding-block: 70px 54px; }
+/*
+  Hero 제목만 조금 크게 간다. 세 줄이 각각 짧아서(같은 사진. / 다른 시대. /
+  다른 나.) 큰 크기를 견디고, 이 문장이 제품의 한 줄 정의다.
+  그래도 행간은 1.24 를 그대로 쓴다 — 여기가 가장 뭉개져 보이던 곳이다.
+*/
 .masthead .hero-copy h1 {
-  max-width: 610px;
-  font-size: clamp(58px, 6.2vw, 94px);
-  line-height: .94;
-  letter-spacing: -.082em;
+  max-width: 12ch;
+  --kr-size: clamp(46px, 5vw, 76px);
 }
 /* 제목의 마지막 줄. 이전 값(#3d9dcc)은 큰 글자 기준 3:1 에도 못 미치는 2.68:1 이었다. */
 .masthead .hero-copy h1 em { color: var(--accent); }
@@ -1719,11 +1740,42 @@ html { color-scheme: light; accent-color: var(--accent); }
 .project-story,
 .identity-archive,
 .studio-intro { color: var(--text); }
+
+/*
+  한글 제목의 조판.
+  ─────────────────────────────────────────────────────────────
+  네 개의 큰 제목이 각각 다른 크기·자간·행간을 갖고 있었고, 값이 전부
+  라틴 디스플레이 조판에서 온 것이었다 — 자간 -.065em~-.095em, 행간
+  .84~1.08, 굵기 900.
+
+  라틴 대문자는 글자 사이에 자연스러운 여백이 있어서 음수 자간이 오히려
+  덩어리감을 만든다. 한글은 그렇지 않다. 낱자가 정사각형 틀을 꽉 채우고
+  이미 조밀해서, 같은 값을 넣으면 받침과 다음 글자가 붙어 뭉개진다.
+  행간도 마찬가지다 — 한글은 조합형이라 위아래로 실제로 쓰는 높이가
+  라틴보다 크고, 1 미만으로 내리면 줄이 서로 밀린다.
+
+  그래서 한 곳에서 정의하고 네 제목이 같은 값을 쓴다. 크기는 화면 폭이
+  아니라 **자기가 놓인 칸**에 맞춘다(--kr-size). 78px 제목을 286px 칸에
+  넣으면 두세 글자마다 줄이 바뀐다.
+*/
+.masthead .hero-copy h1,
+.story-main h2,
+.archive-heading h2,
+.studio-intro h2 {
+  font-family: var(--font-korean);
+  font-weight: 800;
+  font-size: var(--kr-size);
+  line-height: 1.24;
+  letter-spacing: -.018em;
+  word-break: keep-all;
+  text-wrap: balance;
+}
+
 .project-story {
   grid-template-columns: 120px minmax(0, 1fr);
   gap: 26px clamp(34px, 6vw, 94px);
   margin-block: 32px;
-  padding-block: clamp(76px, 9vw, 128px);
+  padding-block: clamp(56px, 6vw, 92px);
   border: 1px solid rgba(30, 64, 175, .14);
   border-radius: 26px;
   background: linear-gradient(140deg, rgba(255,252,249,.92), rgba(234,241,251,.88));
@@ -1731,10 +1783,8 @@ html { color-scheme: light; accent-color: var(--accent); }
 }
 .project-story::before { color: rgba(30,64,175,.055); }
 .story-main h2 {
-  max-width: 780px;
-  font-size: clamp(40px, 4.6vw, 68px);
-  line-height: 1.1;
-  letter-spacing: -.062em;
+  max-width: 20ch;
+  --kr-size: clamp(30px, 3.4vw, 50px);
 }
 .story-lead { max-width: 760px; margin-top: 32px; color: var(--muted); font-size: 16px; line-height: 1.88; }
 .story-note {
@@ -1775,26 +1825,31 @@ html { color-scheme: light; accent-color: var(--accent); }
 .identity-archive::before { color: rgba(30,64,175,.05); }
 .archive-heading > p { color: var(--accent); }
 .archive-heading h2 {
-  font-size: clamp(42px, 4.6vw, 68px);
-  line-height: 1.08;
-  letter-spacing: -.065em;
+  /* 좁은 칸에 놓이므로 네 제목 중 가장 작게 잡는다. */
+  --kr-size: clamp(27px, 2.6vw, 38px);
 }
 .archive-banner { border-color: rgba(30,64,175,.3); border-radius: 18px; box-shadow: 0 24px 60px rgba(52,66,104,.18); }
 .archive-banner figcaption { color: #fff; background: rgba(22,34,58,.8); }
 
 .studio-intro {
-  grid-template-columns: 120px minmax(0, 1fr) auto;
+  /*
+    가운데 칸을 1fr 로 두면 제목이 다 차지하지 못한 폭이 그대로 빈 공간이
+    되고, 오른쪽 한 줄짜리 문구가 저 멀리 홀로 떨어진다. 제목 칸을 내용에
+    맞춰 줄이고 남는 폭을 가운데로 흡수한다.
+  */
+  grid-template-columns: 120px auto 1fr;
+  align-items: baseline;
   margin-top: 32px;
-  padding-block: clamp(72px, 8vw, 112px) 34px;
+  padding-block: clamp(52px, 5.5vw, 84px) 30px;
   border-top: 1px solid var(--line);
   background: linear-gradient(110deg, rgba(255,252,249,.82), rgba(234,241,251,.72));
 }
 .studio-intro h2 {
-  max-width: 800px;
-  font-size: clamp(42px, 4.8vw, 70px);
-  line-height: 1.08;
-  letter-spacing: -.065em;
+  max-width: 22ch;
+  --kr-size: clamp(28px, 3.2vw, 46px);
 }
+/* 오른쪽 끝이 아니라 제목 옆에 붙여 한 덩어리로 읽히게 한다. */
+.studio-intro > span { justify-self: start; align-self: end; max-width: 22ch; }
 
 .layout { gap: 16px; }
 .panel {
@@ -1935,7 +1990,7 @@ select { border-radius: 12px; }
 
 @media (max-width: 640px) {
   .masthead { border-radius: 20px; }
-  .masthead .hero-copy h1 { font-size: clamp(48px, 15vw, 64px); line-height: .95; }
+  .masthead .hero-copy h1 { --kr-size: clamp(38px, 11vw, 52px); }
   .masthead .hero-copy .hero-lead { font-size: 15px; line-height: 1.75; }
   .project-story,
   .identity-archive { border-radius: 20px; }
@@ -1943,7 +1998,7 @@ select { border-radius: 12px; }
   .story-note { grid-column: 1; grid-template-columns: 1fr; }
   .story-main h2,
   .archive-heading h2,
-  .studio-intro h2 { font-size: clamp(36px, 11vw, 50px); line-height: 1.12; }
+  .studio-intro h2 { --kr-size: clamp(26px, 7.4vw, 34px); max-width: none; }
   .studio-intro { grid-template-columns: 1fr; }
   .panel { border-radius: 16px; }
 }
